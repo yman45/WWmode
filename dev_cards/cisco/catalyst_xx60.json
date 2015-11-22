@@ -1,0 +1,9 @@
+{
+    "vendor": "Cisco",
+    "series": "Catalyst 2960/3560",
+    "info_pattern": "C(35|29)60 Software",
+    "model_oid": "1.3.6.1.2.1.47.1.1.1.1.13.1001",
+    "firmware_oid": "1.3.6.1.2.1.47.1.1.1.1.10.1001",
+    "vlan_tree": "1.3.6.1.4.1.9.9.68.1.2.1.1.2",
+    "vlan_tree_by_oid": "True"
+}
