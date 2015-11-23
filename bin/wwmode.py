@@ -9,6 +9,9 @@ from utils.load_settings import Settings
 from utils.load_cards import retrive
 
 
+IFALIAS_OID = '1.3.6.1.2.1.31.1.1.1.18'
+
+
 class Device:
     def __init__(self, ip):
         self.ip = ip
@@ -32,50 +35,50 @@ def worker():
             break
         snmp_get = snmp_run(engine, '***REMOVED***', host.exploded,
                             'sysDescr', mib='SNMPv2-MIB')
-        erInd, erStat, erIndex, varBinds = next(snmp_get)
-        response = process_output(erInd, erStat, erIndex, varBinds,
-                                  host.exploded)
-        if response:
+        error_indication, error_status, error_index, var_binds = next(snmp_get)
+        oid, value = process_output(error_indication, error_status, error_index,
+                                    var_binds, host.exploded)
+        if value:
             device = Device(host.exploded)
             with threading.Lock():
                 available_devices.append(device)
-            device.location = get_with_send('sysLocation', host.exploded,
-                                            snmp_get, mib='SNMPv2-MIB')
-            device.contact = get_with_send('sysContact', host.exploded,
-                                           snmp_get, mib='SNMPv2-MIB')
-            model_oid = device.identify(response.split(' = ')[1].strip())
+            oid, device.location = get_with_send('sysLocation', host.exploded,
+                                                 snmp_get, mib='SNMPv2-MIB')
+            oid, device.contact = get_with_send('sysContact', host.exploded,
+                                                snmp_get, mib='SNMPv2-MIB')
+            model_oid = device.identify(value)
             if model_oid:
-                device.model = get_with_send(model_oid, host.exploded, snmp_get)
-                device.firmware = get_with_send(device.firmware_oid,
-                                                host.exploded, snmp_get)
+                oid, device.model = get_with_send(model_oid, host.exploded,
+                                                  snmp_get)
+                oid, device.firmware = get_with_send(device.firmware_oid,
+                                                     host.exploded, snmp_get)
                 snmp_next = snmp_run(engine, '***REMOVED***', host.exploded,
                                      device.vlan_oid, action="next")
-                for erInd, erStat, erIndex, varBinds in snmp_next:
-                    vlan = process_output(erInd, erStat, erIndex, varBinds,
-                                          host.exploded)
-                    if device.vlan_oid[13:] not in vlan:
-                        # OID number before 13th position is automatically
-                        # translated into name
+                for (error_indication, error_status, error_index,
+                     var_binds) in snmp_next:
+                    oid, vlan = process_output(
+                        error_indication, error_status, error_index, var_binds,
+                        host.exploded)
+                    if device.vlan_oid not in oid:
                         break
                     if device.vtree:
-                        extracted_vlan = vlan.split(' = ')[0].split(
-                            '.')[-1].rstrip('"')
-                    else:
-                        extracted_vlan = vlan.split(' = ')[1]
-                    if extracted_vlan not in run_set.unneded_vlans:
-                        device.vlans.append(extracted_vlan)
-                del snmp_next
+                        vlan = oid.split('.')[-1]
+                    if vlan not in run_set.unneded_vlans:
+                        device.vlans.append(vlan)
                 snmp_next = snmp_run(engine, '***REMOVED***', host.exploded,
                                      'ifAlias', mib='IF-MIB', action="next")
-                for erInd, erStat, erIndex, varBinds in snmp_next:
-                    if_descr = process_output(erInd, erStat, erIndex, varBinds,
-                                              host.exploded)
-                    if not if_descr or 'ifAlias' not in if_descr:
+                for (error_indication, error_status, error_index,
+                     var_binds) in snmp_next:
+                    oid, if_descr = process_output(
+                        error_indication, error_status, error_index, var_binds,
+                        host.exploded)
+                    if IFALIAS_OID not in oid:
                         break
                     if re.match(run_set.uplink_pattern,
-                                if_descr.split(' = ')[1].strip()):
-                        device.uplinks.append(if_descr.split(' = ')[1].strip())
+                                if_descr):
+                        device.uplinks.append(if_descr)
                 print('{} ----> {}'.format(host, device.model))
+                print('{} ----> {}'.format(host, device.firmware))
                 print('{} ----> {}'.format(host, device.uplinks))
                 print('{} ----> {}'.format(host, device.vlans))
             else:
