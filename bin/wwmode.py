@@ -33,7 +33,7 @@ def worker():
         host = q.get()
         if host is None:
             break
-        snmp_get = snmp_run(engine, '***REMOVED***', host.exploded,
+        snmp_get = snmp_run(engine, run_set.ro_community, host.exploded,
                             'sysDescr', mib='SNMPv2-MIB')
         error_indication, error_status, error_index, var_binds = next(snmp_get)
         oid, value = process_output(error_indication, error_status, error_index,
@@ -52,8 +52,9 @@ def worker():
                                                   snmp_get)
                 oid, device.firmware = get_with_send(device.firmware_oid,
                                                      host.exploded, snmp_get)
-                snmp_next = snmp_run(engine, '***REMOVED***', host.exploded,
-                                     device.vlan_oid, action="next")
+                snmp_next = snmp_run(engine, run_set.ro_community,
+                                     host.exploded, device.vlan_oid,
+                                     action="next")
                 for (error_indication, error_status, error_index,
                      var_binds) in snmp_next:
                     oid, vlan = process_output(
@@ -65,8 +66,9 @@ def worker():
                         vlan = oid.split('.')[-1]
                     if vlan not in run_set.unneded_vlans:
                         device.vlans.append(vlan)
-                snmp_next = snmp_run(engine, '***REMOVED***', host.exploded,
-                                     'ifAlias', mib='IF-MIB', action="next")
+                snmp_next = snmp_run(engine, run_set.ro_community,
+                                     host.exploded, 'ifAlias', mib='IF-MIB',
+                                     action="next")
                 for (error_indication, error_status, error_index,
                      var_binds) in snmp_next:
                     oid, if_descr = process_output(
@@ -76,7 +78,12 @@ def worker():
                         break
                     if re.match(run_set.uplink_pattern,
                                 if_descr):
-                        device.uplinks.append(if_descr)
+                        if_index = oid.split('.')[-1]
+                        oid, if_speed = get_with_send(
+                            'ifHighSpeed', host.exploded, snmp_get,
+                            mib='IF-MIB', index=if_index)
+                        if_speed = if_speed + ' Mb/s'
+                        device.uplinks.append((if_descr, if_speed))
                 print('{} ----> {}'.format(host, device.model))
                 print('{} ----> {}'.format(host, device.firmware))
                 print('{} ----> {}'.format(host, device.uplinks))

@@ -53,5 +53,5 @@ coverage.xml
 docs/_build/
 
 # Custom
-.py~
-.swp
+*.py~
+*.swp

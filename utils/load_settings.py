@@ -11,7 +11,7 @@ class Settings:
     def __init__(self):
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
         self.allowed_params = ('num_threads', 'subnet', 'unneded_vlans',
-                               'uplink_pattern')
+                               'uplink_pattern', 'ro_community')
         self.subnets = []
         self.unneded_vlans = []
 
