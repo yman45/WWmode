@@ -4,12 +4,9 @@ import threading
 import shelve
 from queue import Queue
 from pysnmp.hlapi import SnmpEngine
-from utils.snmpget import snmp_run, process_output, get_with_send
+from utils.snmpget import snmp_run, process_output, get_with_send, tree_walk
 from utils.load_settings import Settings
 from utils.load_cards import retrive
-
-
-IFALIAS_OID = '1.3.6.1.2.1.31.1.1.1.18'
 
 
 class Device:
@@ -28,16 +25,6 @@ class Device:
                 self.vtree = True if 'vlan_tree_by_oid' in card else False
                 self.firmware_oid = card['firmware_oid']
                 return card['model_oid']
-
-    def tree_walk(self, engine, community, oid):
-        snmp_next = snmp_run(engine, community, self.ip, oid, action='next')
-        for error_indication, error_status, error_index, var_binds in snmp_next:
-            r_oid, value = process_output(error_indication, error_status,
-                                          error_index, var_binds, self.ip)
-            if oid not in r_oid:
-                raise StopIteration
-            else:
-                yield r_oid, value
 
 
 def worker():
@@ -65,14 +52,15 @@ def worker():
                                               snmp_get)
             oid, device.firmware = get_with_send(device.firmware_oid,
                                                  host.exploded, snmp_get)
-            for oid, vlan in device.tree_walk(engine, run_set.ro_community,
-                                              device.vlan_oid):
+            for oid, vlan in tree_walk(engine, run_set.ro_community,
+                                       host.exploded, device.vlan_oid):
                 if device.vtree:
                      vlan = oid.split('.')[-1]
                 if vlan not in run_set.unneded_vlans:
                     device.vlans.append(vlan)
-            for oid, if_descr in device.tree_walk(engine, run_set.ro_community,
-                                                  IFALIAS_OID):
+            for oid, if_descr in tree_walk(engine, run_set.ro_community,
+                                           host.exploded, 'ifAlias',
+                                           mib='IF-MIB'):
                 if re.match(run_set.uplink_pattern, if_descr):
                     if_index = oid.split('.')[-1]
                     oid, if_speed = get_with_send('ifHighSpeed', host.exploded,
