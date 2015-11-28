@@ -93,5 +93,6 @@ def worker(queue, settings, db):
         else:
             print('{} unrecognized...'.format(host))
         devdb[device.ip] = device
-        transaction.commit()
+        if device._p_changed:
+            transaction.commit()
         queue.task_done()
