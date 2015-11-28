@@ -42,4 +42,5 @@ for i in range(run_set.num_threads):
 for t in threads:
     t.join()
 print('Total execution time: {:.2f} sec.'.format(time.time() - start_time))
-print('Total hosts founded: {}'.format(Device.num_instances))
+print('New hosts founded: {}'.format(Device.num_instances))
+print('Total hosts founded: {}'.format(Device.founded_hosts))

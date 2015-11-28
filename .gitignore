@@ -57,3 +57,4 @@ docs/_build/
 *.swp
 devdb.fs
 devdb.fs.*
+wwmode.conf

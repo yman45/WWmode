@@ -9,6 +9,7 @@ from utils.load_cards import retrive
 
 class Device(Persistent):
     num_instances = 0
+    founded_hosts = 0
     device_cards = retrive()
 
     def __init__(self, ip):
@@ -41,8 +42,14 @@ class Device(Persistent):
 
 
 def worker(queue, settings, db):
+    """Very strange behavior but PySNMP compile SNMPv2-MIB::sysLocation &
+    sysContact into OID without last 0. Second strange thing index=0 doesn't
+    work at all. So I use numerical OID to retrive location and contact.
+    """
     engine = SnmpEngine()
     while True:
+        all_vlans = []
+        all_uplinks = []
         connection = db.open()
         dbroot = connection.root()
         host = queue.get()
@@ -58,11 +65,14 @@ def worker(queue, settings, db):
         if not value:
             queue.task_done()
             continue
-        device = Device(host.exploded)
-        oid, device.location = get_with_send('sysLocation', host.exploded,
-                                             snmp_get, mib='SNMPv2-MIB')
-        oid, device.contact = get_with_send('sysContact', host.exploded,
-                                            snmp_get, mib='SNMPv2-MIB')
+        if host.exploded not in devdb:
+            devdb[host.exploded] = Device(host.exploded)
+        device = devdb[host.exploded]
+        Device.founded_hosts += 1
+        oid, device.location = get_with_send(
+            '1.3.6.1.2.1.1.6.0', host.exploded, snmp_get)
+        oid, device.contact = get_with_send(
+            '1.3.6.1.2.1.1.4.0', host.exploded, snmp_get)
         device.test_domain_name()
         model_oid = device.identify(value)
         if model_oid:
@@ -75,7 +85,8 @@ def worker(queue, settings, db):
                 if device.vtree:
                     vlan = oid.split('.')[-1]
                 if vlan not in settings.unneded_vlans:
-                    device.vlans.append(vlan)
+                    all_vlans.append(vlan)
+            device.vlans = all_vlans
             for oid, if_descr in tree_walk(engine, settings.ro_community,
                                            host.exploded, 'ifAlias',
                                            mib='IF-MIB'):
@@ -85,7 +96,8 @@ def worker(queue, settings, db):
                                                   snmp_get, mib='IF-MIB',
                                                   index=if_index)
                     if_speed = if_speed + ' Mb/s'
-                    device.uplinks.append((if_descr, if_speed))
+                    all_uplinks.append((if_descr, if_speed))
+            device.uplinks = all_uplinks
             print('{} ----> {}'.format(host, device.model))
             print('{} ----> {}'.format(host, device.firmware))
             print('{} ----> {}'.format(host, device.uplinks))
@@ -93,6 +105,5 @@ def worker(queue, settings, db):
         else:
             print('{} unrecognized...'.format(host))
         devdb[device.ip] = device
-        if device._p_changed:
-            transaction.commit()
+        transaction.commit()
         queue.task_done()

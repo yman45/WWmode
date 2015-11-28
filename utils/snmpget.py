@@ -53,7 +53,8 @@ def process_output(error_indication, error_status, error_index, var_binds,
 
 def get_with_send(oid, address, snmp_gen, mib=None, index=None):
     object_identity = (mib, oid) if mib else (oid, )
-    if index: object_identity += (index, )
+    if index:
+        object_identity += (index, )
     error_indication, error_status, error_index, var_binds = snmp_gen.send(
         [ObjectType(ObjectIdentity(*object_identity))])
     return process_output(error_indication, error_status, error_index,
