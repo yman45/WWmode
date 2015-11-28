@@ -1,4 +1,5 @@
 import re
+import socket
 from pysnmp.hlapi import SnmpEngine
 import transaction
 from persistent import Persistent
@@ -24,6 +25,20 @@ class Device(Persistent):
                 self.firmware_oid = card['firmware_oid']
                 return card['model_oid']
 
+    def test_domain_name(self):
+        try:
+            self.dname, alias, addresslist = socket.gethostbyaddr(self.ip)
+            try:
+                return_ip = socket.gethostbyname(self.dname)
+                if self.ip == return_ip:
+                    self.dname_error = None
+                else:
+                    self.dname_error = 'A record not same as PTR'
+            except socket.gaierror:
+                self.dname_error = 'No A record on received PTR'
+        except socket.herror:
+            self.dname_error = 'No PTR record for that host'
+
 
 def worker(queue, settings, db):
     engine = SnmpEngine()
@@ -48,6 +63,7 @@ def worker(queue, settings, db):
                                              snmp_get, mib='SNMPv2-MIB')
         oid, device.contact = get_with_send('sysContact', host.exploded,
                                             snmp_get, mib='SNMPv2-MIB')
+        device.test_domain_name()
         model_oid = device.identify(value)
         if model_oid:
             oid, device.model = get_with_send(model_oid, host.exploded,
