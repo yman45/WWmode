@@ -2,7 +2,7 @@ import logging
 from pysnmp.hlapi import *
 
 
-logging.basicConfig(filename='running.log', level=logging.INFO)
+logging.basicConfig(filename='logs/running.log', level=logging.INFO)
 
 
 def snmp_run(engine, community_name, address, oid, mib=None, action='get',

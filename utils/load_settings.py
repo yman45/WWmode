@@ -4,7 +4,7 @@ import ipaddress
 import logging
 
 
-logging.basicConfig(filename='running.log', level=logging.INFO)
+logging.basicConfig(filename='logs/running.log', level=logging.INFO)
 
 
 class Settings:

@@ -3,7 +3,7 @@ import os
 import os.path
 import json
 
-logging.basicConfig(filename='running.log', level=logging.INFO)
+logging.basicConfig(filename='logs/running.log', level=logging.INFO)
 
 
 class NoDeviceDirectoryError(OSError):
