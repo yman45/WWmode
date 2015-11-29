@@ -71,7 +71,7 @@ class Device(Persistent):
         except OSError:
             pass
 
-    def check_host(self):
+    def check_host(self, settings):
         if not self.location:
             logging.error('{}: System: No location for host'.format(self.ip))
         if not self.contact:
@@ -79,10 +79,17 @@ class Device(Persistent):
         elif not re.match(r'(se|ls|lc)\d@intertax.ru', self.contact.strip()):
             logging.error('{}: System: Not useful contact {}'.format(
                 self.ip, self.contact))
+        if settings.allowed_vlans:
+            out_of_range_vlans = (
+                [x for x in self.vlans if int(x) not in settings.allowed_vlans])
+            if out_of_range_vlans:
+                logging.warning(
+                    '{}: VLAN DB: not allowed VLANs {} configured on host.'
+                    .format(self.ip, out_of_range_vlans))
 
 
 def worker(queue, settings, db):
-    """Very strange behavior but PySNMP compile SNMPv2-MIB::sysLocation &
+    """Very strange behavior: PySNMP compile SNMPv2-MIB::sysLocation &
     sysContact into OID without last 0. Second strange thing index=0 doesn't
     work at all. So I use numerical OID to retrive location and contact.
     """
@@ -143,7 +150,7 @@ def worker(queue, settings, db):
             logging.info('{} ----> {}'.format(host, device.model))
         else:
             logging.info('{} unrecognized...'.format(host))
-        device.check_host()
+        device.check_host(settings)
         devdb[device.ip] = device
         transaction.commit()
         queue.task_done()
