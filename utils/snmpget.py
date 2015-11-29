@@ -2,7 +2,7 @@ import logging
 from pysnmp.hlapi import *
 
 
-logging.basicConfig(filename='logs/running.log', level=logging.INFO)
+m_logger = logging.getLogger('wwmode_app.utils.snmpget')
 
 
 def snmp_run(engine, community_name, address, oid, mib=None, action='get',
@@ -36,10 +36,10 @@ def snmp_run(engine, community_name, address, oid, mib=None, action='get',
 def process_output(error_indication, error_status, error_index, var_binds,
                    address):
     if error_indication:
-        logging.info('{} at {}'.format(error_indication, address))
+        m_logger.info('{} at {}'.format(error_indication, address))
         return None, None
     elif error_status:
-        logging.error('{} with {} at {}'.format(
+        m_logger.error('{} with {} at {}'.format(
             error_status.prettyPrint(),
             error_index and var_binds[int(error_index)-1][0] or '?', address))
         return None, None

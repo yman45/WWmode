@@ -1,5 +1,6 @@
 import time
 import threading
+import logging
 from queue import Queue
 from ZODB import FileStorage, DB
 import transaction
@@ -11,11 +12,25 @@ def db_check(db, treename):
     connection = db.open()
     dbroot = connection.root()
     if treename not in dbroot:
+        logger.info('Create new devdb')
         from BTrees.OOBTree import OOBTree
         dbroot[treename] = OOBTree()
         transaction.commit()
     connection.close()
 
+logger = logging.getLogger('wwmode_app')
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('logs/devdb.log')
+fh.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    '%d %B %Y %H:%M:%S.%03d')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 start_time = time.time()
 q = Queue()
 threads = []

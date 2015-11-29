@@ -4,16 +4,17 @@ import ipaddress
 import logging
 
 
-logging.basicConfig(filename='logs/running.log', level=logging.INFO)
+m_logger = logging.getLogger('wwmode_app.utils.load_settings')
 
 
 class Settings:
     def __init__(self):
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
         self.allowed_params = ('num_threads', 'subnet', 'unneded_vlans',
-                               'uplink_pattern', 'ro_community')
+                               'uplink_pattern', 'ro_community', 'location')
         self.subnets = []
         self.unneded_vlans = []
+        self.location = 'straight'
 
     def load_conf(self):
         with open(self.conf_location, 'r', encoding='utf-8') as conf_file:
@@ -30,5 +31,5 @@ class Settings:
                 elif parameter in self.allowed_params:
                     self.__setattr__(parameter, value)
                 else:
-                    logging.warning('Unidentified parameter: {}'.format(
+                    m_logger.warning('Unidentified parameter: {}'.format(
                         parameter))

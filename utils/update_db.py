@@ -1,16 +1,33 @@
 import re
 import socket
+import logging
+import datetime
 from pysnmp.hlapi import SnmpEngine
 import transaction
 from persistent import Persistent
 from utils.snmpget import snmp_run, process_output, get_with_send, tree_walk
 from utils.load_cards import retrive
+from lexicon.translate import convert
+
+
+device_cards = retrive()
+dtnow = datetime.datetime.now()
+logfile = 'logs/update_db_' + dtnow.strftime('%d-%m-%Y_%H-%M') + '.log'
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s : %(message)s',
+                    datefmt='%d %B %Y %H:%M:%S',
+                    filename=logfile,
+                    filemode='w')
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
 
 
 class Device(Persistent):
     num_instances = 0
     founded_hosts = 0
-    device_cards = retrive()
 
     def __init__(self, ip):
         self.ip = ip
@@ -19,7 +36,7 @@ class Device(Persistent):
         Device.num_instances += 1
 
     def identify(self, descr):
-        for card in Device.device_cards:
+        for card in device_cards:
             if re.search(card['info_pattern'], descr):
                 self.vlan_oid = card['vlan_tree']
                 self.vtree = True if 'vlan_tree_by_oid' in card else False
@@ -31,14 +48,37 @@ class Device(Persistent):
             self.dname, alias, addresslist = socket.gethostbyaddr(self.ip)
             try:
                 return_ip = socket.gethostbyname(self.dname)
-                if self.ip == return_ip:
-                    self.dname_error = None
-                else:
-                    self.dname_error = 'A record not same as PTR'
+                if self.ip != return_ip:
+                    logging.error('{}: DNS: A record not same as PTR'.format(
+                        self.ip))
             except socket.gaierror:
-                self.dname_error = 'No A record on received PTR'
+                logging.error('{}: DNS: No A record on received PTR'.format(
+                    self.ip))
         except socket.herror:
-            self.dname_error = 'No PTR record for that host'
+            logging.error('{}: DNS: No PTR record for that host'.format(
+                self.ip))
+
+    def translit_location(self, schema):
+        if not self.location:
+            pass
+        if not self.location.startswith('!') and ',' in self.location:
+            delimeter = self.location.index(',')
+        else:
+            delimeter = 0
+        try:
+            self.location = convert(self.location, conv_from='lat',
+                                    end=delimeter, schema=schema)
+        except OSError:
+            pass
+
+    def check_host(self):
+        if not self.location:
+            logging.error('{}: System: No location for host'.format(self.ip))
+        if not self.contact:
+            logging.error('{}: System: No contact for host'.format(self.ip))
+        elif not re.match(r'(se|ls|lc)\d@intertax.ru', self.contact.strip()):
+            logging.error('{}: System: Not useful contact {}'.format(
+                self.ip, self.contact))
 
 
 def worker(queue, settings, db):
@@ -71,6 +111,8 @@ def worker(queue, settings, db):
         Device.founded_hosts += 1
         oid, device.location = get_with_send(
             '1.3.6.1.2.1.1.6.0', host.exploded, snmp_get)
+        if settings.location != 'straight':
+            device.translit_location(settings.location)
         oid, device.contact = get_with_send(
             '1.3.6.1.2.1.1.4.0', host.exploded, snmp_get)
         device.test_domain_name()
@@ -98,12 +140,10 @@ def worker(queue, settings, db):
                     if_speed = if_speed + ' Mb/s'
                     all_uplinks.append((if_descr, if_speed))
             device.uplinks = all_uplinks
-            print('{} ----> {}'.format(host, device.model))
-            print('{} ----> {}'.format(host, device.firmware))
-            print('{} ----> {}'.format(host, device.uplinks))
-            print('{} ----> {}'.format(host, device.vlans))
+            logging.info('{} ----> {}'.format(host, device.model))
         else:
-            print('{} unrecognized...'.format(host))
+            logging.info('{} unrecognized...'.format(host))
+        device.check_host()
         devdb[device.ip] = device
         transaction.commit()
         queue.task_done()
