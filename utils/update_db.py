@@ -94,16 +94,16 @@ def worker(queue, settings, db):
     work at all. So I use numerical OID to retrive location and contact.
     """
     engine = SnmpEngine()
+    connection = db.open()
+    dbroot = connection.root()
+    devdb = dbroot['devicedb']
     while True:
         all_vlans = []
         all_uplinks = []
-        connection = db.open()
-        dbroot = connection.root()
         host = queue.get()
         if host is None:
             connection.close()
             break
-        devdb = dbroot['devicedb']
         snmp_get = snmp_run(engine, settings.ro_community, host.exploded,
                             'sysDescr', mib='SNMPv2-MIB')
         error_indication, error_status, error_index, var_binds = next(snmp_get)
