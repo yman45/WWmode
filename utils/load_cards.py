@@ -15,6 +15,15 @@ class NoCardsError(OSError):
 
 
 def check_dir(dir_name, cards, path_obj='directory'):
+    '''Check directory tree which contain JSON cards. Log inconsistences in tree
+    Args:
+        dir_name - directory to be checked
+        cards - list of device cards
+        path_obj - indicate that path lead to
+            directory (DEFAULT)
+            OR file
+    No return value
+    '''
     path = os.path.join(os.getcwd(), dir_name)
     for item in os.listdir(path):
         item_path = os.path.join(path, item)
@@ -46,6 +55,11 @@ def check_dir(dir_name, cards, path_obj='directory'):
 
 
 def retrive():
+    '''Build cards from JSON files & append them to list
+    No args
+    Return:
+        cards - list of device cards
+    '''
     cards_path = os.path.join(os.getcwd(), 'dev_cards')
     if not os.path.isdir(cards_path):
         m_logger.warning("No directory with cards founded")
