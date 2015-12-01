@@ -77,6 +77,20 @@ def update_cmd():
     logger.debug('Total hosts founded: {}'.format(Device.founded_hosts))
 
 
+def db_open():
+    '''Create ZODB.DB instance & gather tree name
+    No args
+    Return:
+        db - instance of ZODB.DB class
+        run_set.db_tree - tree name as stored in configuration file
+    '''
+    run_set = Settings()
+    run_set.load_conf()
+    storage = FileStorage.FileStorage(run_set.db_name)
+    db = DB(storage)
+    return db, run_set.db_tree
+
+
 def search_db(field, value):
     '''Search for given value through requested records attribute & print it
     Args:
@@ -84,20 +98,40 @@ def search_db(field, value):
         value - value to find
     No return value
     '''
-    run_set = Settings()
-    run_set.load_conf()
-    storage = FileStorage.FileStorage(run_set.db_name)
-    db = DB(storage)
+    db, tree = db_open()
     connection = db.open()
     dbroot = connection.root()
-    devdb = dbroot[run_set.db_tree]
+    devdb = dbroot[tree]
     for dev in devdb:
-        if field != 'vlans' and getattr(devdb[dev], field) == value:
+        try:
+            dev_val = getattr(devdb[dev], field)
+        except AttributeError:
+            continue
+        if not isinstance(dev_val, list) and dev_val == value:
             print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
                                         devdb[dev].location))
-        elif field == 'vlans' and value in getattr(devdb[dev], field):
+        elif isinstance(dev_val, list) and value in dev_val:
             print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
                                         devdb[dev].location))
+
+
+def show_cmd():
+    '''Print out all records
+    No args & return value
+    '''
+    db, tree = db_open()
+    connection = db.open()
+    dbroot = connection.root()
+    devdb = dbroot[tree]
+    for dev in devdb:
+        try:
+            print("{} - {} - {} - {}".format(
+                devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
+                devdb[dev].model))
+        except AttributeError:
+            print("{} - {} - {}".format(
+                devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
+    print('Total stored devices - {}'.format(len(devdb.items())))
 
 HELP_MSG = """
 WWmode is a tool for collecting data about devices in network, store it in
@@ -114,6 +148,8 @@ elif sys.argv[1] == '-update' and len(sys.argv) > 2:
     exit(1)
 elif sys.argv[1] == '-update':
     update_cmd()
+elif sys.argv[1] == '-show':
+    show_cmd()
 elif sys.argv[1] == '-search':
     search_db(sys.argv[2][1:], sys.argv[3])
 else:
