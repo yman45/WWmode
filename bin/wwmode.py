@@ -25,6 +25,12 @@ logger.addHandler(ch)
 
 
 def db_check(db, treename):
+    '''Create database tree if it doesn't exist
+    Args:
+        db - instance of ZODB.DB class
+        treename - name of tree
+    No return value
+    '''
     connection = db.open()
     dbroot = connection.root()
     if treename not in dbroot:
@@ -36,6 +42,10 @@ def db_check(db, treename):
 
 
 def update_cmd():
+    '''Update device database using multithreading with utils/update_db.worker
+    function
+    No args & return value
+    '''
     start_time = time.time()
     q = Queue()
     threads = []
@@ -68,6 +78,12 @@ def update_cmd():
 
 
 def search_db(field, value):
+    '''Search for given value through requested records attribute & print it
+    Args:
+        field - attribute in where we look for value
+        value - value to find
+    No return value
+    '''
     run_set = Settings()
     run_set.load_conf()
     storage = FileStorage.FileStorage(run_set.db_name)
@@ -84,7 +100,11 @@ def search_db(field, value):
                                         devdb[dev].location))
 
 HELP_MSG = """
-This is help message. Please fill me.
+WWmode is a tool for collecting data about devices in network, store it in
+database and search through it.
+    -update :for update database, it automatically check hosts for some errors
+    -search -attr value :search in db for match of value in attr of records
+        -search vlans 505
 """
 if len(sys.argv) < 2:
     print(HELP_MSG)

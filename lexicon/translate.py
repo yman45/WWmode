@@ -8,6 +8,22 @@ m_logger = logging.getLogger('wwmode_app.lexicon.translate')
 
 def convert(text, conv_from='cyr', start=0, end=0, schema='iso9_system_A',
             dict_direction='standart', separator=' = '):
+    '''Generic function to transliterate a text string
+    Args:
+        text - string to translit
+        conv_from - option for swapping values inside mapping dict ('cyr' for
+            'cyr': 'lat' mapping or other for 'lat': 'cyr') (DEFAULT - 'cyr')
+        start - from where to start in string (DEFAULT - 0,
+            start from first char)
+        end - where to end transliteration (DEFAULT - 0, end at the
+            end of string)
+        schema - filename in schemas directory which contain schema
+        dict_direction - option for swapping values while get them from file
+            (use 'standart' for default or any other value for swap)
+        separator - sign that separate values in file
+    Return:
+        result of translit function - transliterated text
+    '''
     if conv_from not in ['cyr', 'lat']:
         m_logger.warning("""Warning: unknown option {} for conv_from parameter.
                          Using cyr instead""".format(conv_from))
@@ -38,6 +54,17 @@ def convert(text, conv_from='cyr', start=0, end=0, schema='iso9_system_A',
 
 
 def build_dict(conv_from, schema, dict_direction, separator):
+    '''Build a mapping using for transliteration
+    Args:
+        conv_from - option for swapping values inside output dict ('cyr' for
+            'cyr': 'lat' mapping or other for 'lat': 'cyr')
+        schema - file containing transliteration schema
+        dict_direction - option for swapping values (use 'standart' for default
+            or any other value for swap)
+        separator - sign that separate values in file
+    Return:
+        ordered_translate_dict - OrderedDict containing transliteration mapping
+    '''
     translate_dict = []
     with open('lexicon/schemas/'+schema, 'r',
               encoding='utf-8') as schema_file:
@@ -65,6 +92,15 @@ def build_dict(conv_from, schema, dict_direction, separator):
 
 
 def translit(text, start, end, dictionary):
+    '''Transliterate string from start index to end using given schema
+    Args:
+        text - string to translit
+        start - start index
+        end - end index
+        dictionary - transliteration schema biulded by build_dict function
+    Return:
+        transliterated string
+    '''
     first_part = text[:start]
     last_part = text[end:]
     text = text[start:end]
