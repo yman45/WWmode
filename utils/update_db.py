@@ -62,7 +62,6 @@ class Device(Persistent):
         num_instances counters
         Args:
             ip - string representation of device IPv4 address
-        No return value
         Overloaded
         '''
         self.ip = ip
@@ -205,7 +204,7 @@ def worker(queue, settings, db):
             for oid, if_descr in tree_walk(engine, settings.ro_community,
                                            host.exploded, 'ifAlias',
                                            mib='IF-MIB'):
-                if re.match(settings.uplink_pattern, if_descr):
+                if if_descr and re.match(settings.uplink_pattern, if_descr):
                     if_index = oid.split('.')[-1]
                     oid, if_speed = get_with_send('ifHighSpeed', host.exploded,
                                                   snmp_get, mib='IF-MIB',
