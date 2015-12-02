@@ -25,3 +25,8 @@ You can search through:
     * Locatoin - **location**
     * Device model - **model**
     * Firmware version - **firmware**
+
+### Show
+
+To show all records in short use *-show* key. To show full output on one
+record use *-show value* where value can be an IPv4 address or FQDN.

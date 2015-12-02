@@ -2,6 +2,7 @@ import time
 import threading
 import logging
 import sys
+import ipaddress
 from queue import Queue
 from ZODB import FileStorage, DB
 import transaction
@@ -115,14 +116,28 @@ def search_db(field, value):
                                         devdb[dev].location))
 
 
-def show_cmd():
-    '''Print out all records
-    No args & return value
+def show_cmd(device=None):
+    '''Print out all records in short or full record for host if it's domain
+    name or IP address provided
+    Args:
+        device - device to be printed (DEFAULT - None)
+    No return value
     '''
     db, tree = db_open()
     connection = db.open()
     dbroot = connection.root()
     devdb = dbroot[tree]
+    if device:
+        try:
+            ipaddress.ip_address(device)
+            print(devdb[device])
+        except ValueError:
+            q_list = list([devdb[x] for x in devdb if devdb[x].dname == device])
+            if q_list:
+                print(q_list[0])
+            else:
+                print("No such domain name in DB")
+        return
     for dev in devdb:
         try:
             print("{} - {} - {} - {}".format(
@@ -139,6 +154,8 @@ database and search through it.
     -update :for update database, it automatically check hosts for some errors
     -search -attr value :search in db for match of value in attr of records
         -search vlans 505
+    -show: to short output for each record in base
+    -show value: for full output of one record (value for IP or FQDN)
 """
 if len(sys.argv) < 2:
     print(HELP_MSG)
@@ -149,7 +166,14 @@ elif sys.argv[1] == '-update' and len(sys.argv) > 2:
 elif sys.argv[1] == '-update':
     update_cmd()
 elif sys.argv[1] == '-show':
-    show_cmd()
+    if len(sys.argv) == 3:
+        pr_device = sys.argv[2]
+    elif len(sys.argv) > 3:
+        print("Too many options for show command")
+        exit(1)
+    else:
+        pr_device = None
+    show_cmd(pr_device)
 elif sys.argv[1] == '-search':
     search_db(sys.argv[2][1:], sys.argv[3])
 else:

@@ -49,6 +49,7 @@ class Device(Persistent):
             not in received value
     methods:
         overloaded __init__
+        overloaded __str__
         identify
         test_domain_name
         translit_location
@@ -68,6 +69,30 @@ class Device(Persistent):
         self.vlans = []
         self.uplinks = []
         Device.num_instances += 1
+
+    def __str__(self):
+        '''Print out device record. Domain name concatenated first because
+        it can be in record, while other info not
+        No args
+        Return:
+            string representation of object
+        Overloaded
+        '''
+        prstr = '''\nIPv4 address: {}\n
+        Device location: {}\n
+        Device contact: {}\n
+        '''.format(self.ip, self.location, self.contact)
+        try:
+            dnamestr = "Domain name: {}\n".format(self.dname)
+        except AttributeError:
+            dnamestr = ""
+        try:
+            addstr = '''Device model: {}\nFirmware version: {}\n
+            VLAN list: {}\nUplinks: {}\n
+            '''.format(self.model, self.firmware, self.vlans, self.uplinks)
+        except AttributeError:
+            addstr = ""
+        return prstr + dnamestr + addstr
 
     def identify(self, descr):
         '''Match sysDescr to device_cards to identify device model line
