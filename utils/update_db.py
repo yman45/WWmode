@@ -2,8 +2,10 @@ import re
 import socket
 import logging
 import datetime
+import time
 from pysnmp.hlapi import SnmpEngine
 import transaction
+import ZODB
 from persistent import Persistent
 from utils.snmpget import snmp_run, process_output, get_with_send, tree_walk
 from utils.load_cards import retrive
@@ -242,5 +244,9 @@ def worker(queue, settings, db):
             logging.info('{} unrecognized...'.format(host))
         device.check_host(settings)
         devdb[device.ip] = device
-        transaction.commit()
+        try:
+            transaction.commit()
+        except ZODB.POSException:
+            time.sleep(2)
+            transaction.commit()
         queue.task_done()

@@ -54,6 +54,7 @@ def update_cmd():
     run_set.load_conf()
     run_set.num_threads = int(run_set.num_threads)
     total_hosts = [x for subnet in run_set.subnets for x in subnet.hosts()]
+    total_hosts.extend(run_set.hosts)
     if run_set.num_threads > len(total_hosts):
         run_set.num_threads = len(total_hosts)
     storage = FileStorage.FileStorage(run_set.db_name)
@@ -130,7 +131,10 @@ def show_cmd(device=None):
     if device:
         try:
             ipaddress.ip_address(device)
-            print(devdb[device])
+            if device in devdb.keys():
+                print(devdb[device])
+            else:
+                print("No device with that IP in DB")
         except ValueError:
             q_list = list([devdb[x] for x in devdb if devdb[x].dname == device])
             if q_list:

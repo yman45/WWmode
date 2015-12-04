@@ -13,6 +13,7 @@ class Settings:
         conf_location - path to configuration file
         allowed_params - allowed attribute names (settings parameters)
         subnets - IPv4 subnets where devices must be discovered
+        hosts - IPv4 addresses of standalone hosts
         unneded_vlans - VLAN list that don't need to be saved in device record
         allowed_vlans - VLAN list that allowed to be configured on device
         location - indicator of what to do with device location:
@@ -33,6 +34,7 @@ class Settings:
                                'uplink_pattern', 'ro_community', 'location',
                                'allowed_vlans', 'db_name', 'db_tree')
         self.subnets = []
+        self.hosts = []
         self.unneded_vlans = []
         self.allowed_vlans = []
         self.location = 'straight'
@@ -49,6 +51,8 @@ class Settings:
                     pass
                 elif parameter == 'subnet':
                     self.subnets.append(ipaddress.ip_network(value))
+                elif parameter == 'host':
+                    self.hosts.append(ipaddress.ip_address(value))
                 elif parameter == 'unneded_vlans':
                     self.unneded_vlans.extend(
                         [x.strip() for x in value.split(',')])
