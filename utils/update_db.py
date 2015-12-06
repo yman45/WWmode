@@ -35,6 +35,8 @@ class Device(Persistent):
         founded_hosts - all hosts that found on the run
     instance attrs:
         ip - IPv4 address of device
+        first_seen - datetime when instance created
+        last_seen - datetime of last run when device seen
         dname - FQDN of device
         contact - SNMPv2-MIB::sysContact value
         location - SNMPv2-MIB::sysLocation value
@@ -66,9 +68,11 @@ class Device(Persistent):
         Overloaded
         '''
         self.ip = ip
+        self.first_seen = datetime.datetime.now().strftime('%d-%m-%Y %H:%M')
         self.vlans = []
         self.uplinks = []
         Device.num_instances += 1
+        logging.info('{}: New device: new device found'.format(self.ip))
 
     def __str__(self):
         '''Print out device record. Domain name concatenated first because
@@ -79,9 +83,12 @@ class Device(Persistent):
         Overloaded
         '''
         prstr = '''\nIPv4 address: {}\n
+        First seen: {}\n
+        Last seen: {}\n
         Device location: {}\n
         Device contact: {}\n
-        '''.format(self.ip, self.location, self.contact)
+        '''.format(self.ip, self.first_seen, self.last_seen, self.location,
+                   self.contact)
         try:
             dnamestr = "Domain name: {}\n".format(self.dname)
         except AttributeError:
@@ -223,6 +230,7 @@ def worker(queue, settings, db):
             devdb[host.exploded] = Device(host.exploded)
         device = devdb[host.exploded]
         Device.founded_hosts += 1
+        device.last_seen = datetime.datetime.now().strftime('%d-%m-%Y %H:%M')
         oid, device.location = get_with_send(
             '1.3.6.1.2.1.1.6.0', host.exploded, snmp_get)
         if settings.location != 'straight':

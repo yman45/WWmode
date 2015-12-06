@@ -44,7 +44,7 @@ def update_cmd():
         num_threads = len(total_hosts)
     db_check(run_set.db_name, run_set.db_tree)
     storage = FileStorage.FileStorage(run_set.db_name)
-    db = DB(storage)
+    db = DB(storage, pool_size=50)
     for i in range(num_threads):
         t = threading.Thread(target=worker, args=(q, run_set, db))
         t.start()
