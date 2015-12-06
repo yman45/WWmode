@@ -2,15 +2,18 @@ import logging
 import os
 import os.path
 import json
+from .wwmode_exception import WWModeException
 
 m_logger = logging.getLogger('wwmode_app.utils.load_cards')
 
 
-class NoDeviceDirectoryError(OSError):
+class NoDeviceDirectoryError(WWModeException):
+    '''Exception for signal cards directory absence'''
     pass
 
 
-class NoCardsError(OSError):
+class NoCardsError(WWModeException):
+    '''Exception to be raised when there is no cards in directory'''
     pass
 
 

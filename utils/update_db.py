@@ -82,21 +82,21 @@ class Device(Persistent):
             string representation of object
         Overloaded
         '''
-        prstr = '''\nIPv4 address: {}\n
-        First seen: {}\n
-        Last seen: {}\n
-        Device location: {}\n
-        Device contact: {}\n
-        '''.format(self.ip, self.first_seen, self.last_seen, self.location,
-                   self.contact)
+        aligner = ' ' * 5
+        prstr = ('{0}IPv4 address: {1}\n{0}First seen: {2}\n' +
+                 '{0}Last seen: {3}\n{0}Device location: {4}\n' +
+                 '{0}Device contact: {5}\n').format(
+            aligner, self.ip, self.first_seen, self.last_seen, self.location,
+            self.contact)
         try:
-            dnamestr = "Domain name: {}\n".format(self.dname)
+            dnamestr = "{}Domain name: {}\n".format(aligner, self.dname)
         except AttributeError:
             dnamestr = ""
         try:
-            addstr = '''Device model: {}\nFirmware version: {}\n
-            VLAN list: {}\nUplinks: {}\n
-            '''.format(self.model, self.firmware, self.vlans, self.uplinks)
+            addstr = ('{0}Device model: {1}\n{0}Firmware version: {2}\n' +
+                      '{0}VLAN list: {3}\n{0}Uplinks: {4}').format(
+                          aligner, self.model, self.firmware, self.vlans,
+                          self.uplinks)
         except AttributeError:
             addstr = ""
         return prstr + dnamestr + addstr

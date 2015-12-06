@@ -1,9 +1,27 @@
 import logging
 from collections import OrderedDict
 import os.path
+from utils.wwmode_exception import WWModeException
 
 
 m_logger = logging.getLogger('wwmode_app.lexicon.translate')
+
+
+class SchemaDoesNotExist(WWModeException):
+    '''Exception to be raised when file with schema does not found'''
+    pass
+
+
+class ConvertParametersError(WWModeException):
+    '''Exception for invalid parameters for convertion'''
+    pass
+
+
+class DictionaryBuildError(WWModeException):
+    '''Exception for invalid file format which not allowed to build
+    dictionary from schema file
+    '''
+    pass
 
 
 def convert(text, conv_from='cyr', start=0, end=0, schema='iso9_system_A',
@@ -35,7 +53,8 @@ def convert(text, conv_from='cyr', start=0, end=0, schema='iso9_system_A',
         dict_direction = 'standart'
     if not type(start) is int or not type(end) is int:
         m_logger.error('Error: start and end parameters must be a digits!')
-        raise ValueError('Start and end parameters must be a digits!')
+        raise ConvertParametersError(
+            'Start and end parameters must be a digits!')
     if end == 0:
         end = len(text)
     if end > len(text):
@@ -47,7 +66,7 @@ def convert(text, conv_from='cyr', start=0, end=0, schema='iso9_system_A',
         end, start = start, end
     if not os.path.exists('lexicon/schemas/'+schema):
         m_logger.error('Error: given schema filename does not exist!')
-        raise OSError('Given schema filename does not exist!')
+        raise SchemaDoesNotExist('Given schema filename does not exist!')
     translate_dictionary = build_dict(conv_from, schema,
                                       dict_direction, separator)
     return translit(text, start, end, translate_dictionary)
@@ -83,7 +102,8 @@ def build_dict(conv_from, schema, dict_direction, separator):
     except IndexError:
         m_logger.error(
             'Error: dictionary cat not be build. Check the file format.')
-        raise IOError('Dictionary cat not be build. Check the file format.')
+        raise DictionaryBuildError(
+            'Dictionary cat not be build. Check the file format.')
     translate_dict = sorted(translate_dict, key=lambda combo: len(combo[0]))
     ordered_translate_dict = OrderedDict()
     for combo in reversed(translate_dict):
