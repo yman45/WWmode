@@ -5,9 +5,9 @@ import sys
 import ipaddress
 from queue import Queue
 from ZODB import FileStorage, DB
-import transaction
 from utils.load_settings import Settings
 from utils.update_db import worker, Device
+from utils.dbutils import DBOpen, db_check
 
 
 logger = logging.getLogger('wwmode_app')
@@ -24,73 +24,43 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-
-def db_check(db, treename):
-    '''Create database tree if it doesn't exist
-    Args:
-        db - instance of ZODB.DB class
-        treename - name of tree
-    No return value
-    '''
-    connection = db.open()
-    dbroot = connection.root()
-    if treename not in dbroot:
-        logger.info('Create new devdb')
-        from BTrees.OOBTree import OOBTree
-        dbroot[treename] = OOBTree()
-        transaction.commit()
-    connection.close()
+run_set = Settings()
+run_set.load_conf()
 
 
 def update_cmd():
     '''Update device database using multithreading with utils/update_db.worker
-    function
+    function. Update do not use DBOpen custom context manager because workers
+    make connections themselves to only one instance of DB
     No args & return value
     '''
     start_time = time.time()
     q = Queue()
     threads = []
-    run_set = Settings()
-    run_set.load_conf()
-    run_set.num_threads = int(run_set.num_threads)
+    num_threads = int(run_set.num_threads)
     total_hosts = [x for subnet in run_set.subnets for x in subnet.hosts()]
     total_hosts.extend(run_set.hosts)
-    if run_set.num_threads > len(total_hosts):
-        run_set.num_threads = len(total_hosts)
+    if num_threads > len(total_hosts):
+        num_threads = len(total_hosts)
+    db_check(run_set.db_name, run_set.db_tree)
     storage = FileStorage.FileStorage(run_set.db_name)
     db = DB(storage)
-    db_check(db, run_set.db_tree)
-    for i in range(run_set.num_threads):
+    for i in range(num_threads):
         t = threading.Thread(target=worker, args=(q, run_set, db))
         t.start()
         threads.append(t)
-
     for item in total_hosts:
         q.put(item)
     q.join()
-
-    for i in range(run_set.num_threads):
+    for i in range(num_threads):
         q.put(None)
     for t in threads:
         t.join()
+    db.close()
     logger.debug('Total execution time: {:.2f} sec.'.format(
         time.time() - start_time))
     logger.debug('New hosts founded: {}'.format(Device.num_instances))
     logger.debug('Total hosts founded: {}'.format(Device.founded_hosts))
-
-
-def db_open():
-    '''Create ZODB.DB instance & gather tree name
-    No args
-    Return:
-        db - instance of ZODB.DB class
-        run_set.db_tree - tree name as stored in configuration file
-    '''
-    run_set = Settings()
-    run_set.load_conf()
-    storage = FileStorage.FileStorage(run_set.db_name)
-    db = DB(storage)
-    return db, run_set.db_tree
 
 
 def search_db(field, value):
@@ -100,21 +70,20 @@ def search_db(field, value):
         value - value to find
     No return value
     '''
-    db, tree = db_open()
-    connection = db.open()
-    dbroot = connection.root()
-    devdb = dbroot[tree]
-    for dev in devdb:
-        try:
-            dev_val = getattr(devdb[dev], field)
-        except AttributeError:
-            continue
-        if not isinstance(dev_val, list) and dev_val == value:
-            print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
-                                        devdb[dev].location))
-        elif isinstance(dev_val, list) and value in dev_val:
-            print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
-                                        devdb[dev].location))
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        for dev in devdb:
+            try:
+                dev_val = getattr(devdb[dev], field)
+            except AttributeError:
+                continue
+            if not isinstance(dev_val, list) and dev_val == value:
+                print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
+                                            devdb[dev].location))
+            elif isinstance(dev_val, list) and value in dev_val:
+                print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
+                                            devdb[dev].location))
 
 
 def show_cmd(device=None):
@@ -124,33 +93,33 @@ def show_cmd(device=None):
         device - device to be printed (DEFAULT - None)
     No return value
     '''
-    db, tree = db_open()
-    connection = db.open()
-    dbroot = connection.root()
-    devdb = dbroot[tree]
-    if device:
-        try:
-            ipaddress.ip_address(device)
-            if device in devdb.keys():
-                print(devdb[device])
-            else:
-                print("No device with that IP in DB")
-        except ValueError:
-            q_list = list([devdb[x] for x in devdb if devdb[x].dname == device])
-            if q_list:
-                print(q_list[0])
-            else:
-                print("No such domain name in DB")
-        return
-    for dev in devdb:
-        try:
-            print("{} - {} - {} - {}".format(
-                devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
-                devdb[dev].model))
-        except AttributeError:
-            print("{} - {} - {}".format(
-                devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
-    print('Total stored devices - {}'.format(len(devdb.items())))
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        if device:
+            try:
+                ipaddress.ip_address(device)
+                if device in devdb.keys():
+                    print(devdb[device])
+                else:
+                    print("No device with that IP in DB")
+            except ValueError:
+                q_list = list(
+                    [devdb[x] for x in devdb if devdb[x].dname == device])
+                if q_list:
+                    print(q_list[0])
+                else:
+                    print("No such domain name in DB")
+            return
+        for dev in devdb:
+            try:
+                print("{} - {} - {} - {}".format(
+                    devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
+                    devdb[dev].model))
+            except AttributeError:
+                print("{} - {} - {}".format(
+                    devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
+        print('Total stored devices - {}'.format(len(devdb.items())))
 
 HELP_MSG = """
 WWmode is a tool for collecting data about devices in network, store it in

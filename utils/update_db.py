@@ -94,6 +94,22 @@ class Device(Persistent):
             addstr = ""
         return prstr + dnamestr + addstr
 
+    def _p_resolveConflict(self, old_state, saved_state, new_state):
+        '''Method for DB conflicts to be resolved. As we do not trying to
+        write devices by many threads it just save new_state, resolving
+        odd conflicts only
+        Args:
+            old_state - value that transaction based on when start
+            saved_state - value that transaction really found in DB
+            new_state - value that transaction want to write
+        Return:
+            new_state
+        '''
+        logging.warning('''{}: DB conflict: got a conflict, new - {}, old - {},
+                        saved - {}'''.format(self.ip, new_state, old_state,
+                                             saved_state))
+        return new_state
+
     def identify(self, descr):
         '''Match sysDescr to device_cards to identify device model line
         Args:
@@ -172,7 +188,7 @@ def worker(queue, settings, db):
     '''Update database by send request on all suplied hosts. Function designed
     for multithreaded use, so it get hosts from Queue. If host answer on
     sysDescr query, function try to recognize model and update or create new
-    record on device in database.
+    record on device in database
     Args:
         queue - instance of queue.Queue class which hold all hosts gathered
             from settings
