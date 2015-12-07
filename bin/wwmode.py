@@ -117,8 +117,11 @@ def show_cmd(device=None):
                     devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
                     devdb[dev].model))
             except AttributeError:
-                print("{} - {} - {}".format(
-                    devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
+                try:
+                    print("{} - {} - {}".format(
+                        devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
+                except AttributeError:
+                    print("{} - {}".format(devdb[dev].ip, devdb[dev].location))
         print('Total stored devices - {}'.format(len(devdb.items())))
 
 HELP_MSG = """
