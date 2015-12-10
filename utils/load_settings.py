@@ -19,6 +19,7 @@ class Settings:
         location - indicator of what to do with device location:
             straight - nothing to do
             name of a schema in lexicon/schemas - translit using that schema
+    instance attrs witch assigned by load_conf method described in app docs
     methods:
         overloaded __init__
         load_conf
@@ -32,7 +33,8 @@ class Settings:
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
         self.allowed_params = ('num_threads', 'subnet', 'unneded_vlans',
                                'uplink_pattern', 'ro_community', 'location',
-                               'allowed_vlans', 'db_name', 'db_tree')
+                               'allowed_vlans', 'db_name', 'db_tree',
+                               'supply_zone', 'default_zone', 'default_role')
         self.subnets = []
         self.hosts = []
         self.unneded_vlans = []

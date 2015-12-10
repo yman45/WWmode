@@ -8,9 +8,10 @@ from persistent import Persistent
 from utils.snmpget import snmp_run, process_output, get_with_send, tree_walk
 from utils.load_cards import retrive
 from lexicon.translate import convert
+from utils.wwmode_exception import WWModeException
 
 
-# Retrive all cards one when module imported
+# Retrive all cards once when module imported
 device_cards = retrive()
 
 dtnow = datetime.datetime.now()
@@ -25,6 +26,16 @@ console.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
+
+
+class SupplyZoneNameError(WWModeException):
+    '''Exception to be raised if there are errors in default_zone setting'''
+    pass
+
+
+class NoNameInSupplyZone(WWModeException):
+    '''Exception to be raised if there is no name domain name in supply zone'''
+    pass
 
 
 class Device(Persistent):
@@ -149,6 +160,30 @@ class Device(Persistent):
         except socket.herror:
             logging.error('{}: DNS: No PTR record for that host'.format(
                 self.ip))
+            self.dname = ''
+
+    def check_supply_zone(self, zone, splitdots):
+        '''Check for presence of domain name same as device name in supply_zone
+        Args:
+            zone - supply zone name, e.g. 'mon.local'
+            splitdots - how many domain levels to split from device domain name
+        Return:
+            False if there is no domain name for device
+            True if domain name presented in supply zone
+            Can raise SupplyZoneError or NoNameInSupplyZone
+        '''
+        if not self.dname:
+            return False
+        try:
+            name = '.'.join(self.dname.split('.')[:-splitdots])
+        except IndexError:
+            return SupplyZoneNameError
+        try:
+            socket.gethostbyname(name + '.' + zone)
+        except:
+            raise NoNameInSupplyZone
+        else:
+            return True
 
     def translit_location(self, schema):
         '''Translit device location using chosen schema
@@ -238,6 +273,15 @@ def worker(queue, settings, db):
         oid, device.contact = get_with_send(
             '1.3.6.1.2.1.1.4.0', host.exploded, snmp_get)
         device.test_domain_name()
+        if not device.location.startswith('!'):
+            try:
+                device.check_supply_zone(settings.supply_zone,
+                                         len(settings.default_zone.split('.')))
+            except SupplyZoneNameError:
+                logging.error('DNS: Incorrect parameters for supply zone check')
+            except NoNameInSupplyZone:
+                logging.error('{}: DNS: no domain name in {} zone'.format(
+                    device.ip, settings.supply_zone))
         model_oid = device.identify(value)
         if model_oid:
             oid, device.model = get_with_send(model_oid, host.exploded,
