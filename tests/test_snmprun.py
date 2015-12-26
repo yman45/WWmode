@@ -3,11 +3,6 @@ from pysnmp.hlapi import SnmpEngine
 import utils.snmpget
 
 
-class DefaultTest(unittest.TestCase):
-    def test_nothing(self):
-        self.assertTrue(True)
-
-
 class SnmpTest(unittest.TestCase):
     def setUp(self):
         self.config = {}
@@ -35,7 +30,7 @@ class SnmpTest(unittest.TestCase):
                                           mib='IF-MIB', action='bulk')
         for er_indication, er_status, er_index, var_binds in snmp_get:
             count += 1
-        self.assertTrue(count > 1)
+        self.assertGreater(count, 1)
 
     def test_snmp_next(self):
         count = 0
