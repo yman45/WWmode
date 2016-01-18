@@ -1,8 +1,8 @@
 import time
 import threading
 import logging
-import sys
 import ipaddress
+from optparse import OptionParser
 from queue import Queue
 from ZODB import FileStorage, DB
 from utils.load_settings import Settings
@@ -23,6 +23,20 @@ fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
+
+usage = "usage: %prog [options]"
+parser = OptionParser(usage=usage)
+parser.add_option("-u", "--update", dest="update", action="store_true",
+                  help="update DB by sending queries to devices")
+parser.add_option("-s", "--show-all", dest="show_all", action="store_true",
+                  help="show all devices")
+parser.add_option("-d", "--show", dest="show_dev",
+                  help="show device card")
+parser.add_option("-v", "--find-vlan", dest="find_vlan",
+                  help="show all switches with VLAN configured")
+parser.add_option("-f", "--full-search", dest="full_search",
+                  help="show records with match in any field")
+(options, args) = parser.parse_args()
 
 run_set = Settings()
 run_set.load_conf()
@@ -70,20 +84,27 @@ def search_db(field, value):
         value - value to find
     No return value
     '''
-    with DBOpen(run_set.db_name) as connection:
-        dbroot = connection.root()
-        devdb = dbroot[run_set.db_tree]
-        for dev in devdb:
-            try:
-                dev_val = getattr(devdb[dev], field)
-            except AttributeError:
-                continue
-            if not isinstance(dev_val, list) and dev_val == value:
-                print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
-                                            devdb[dev].location))
-            elif isinstance(dev_val, list) and value in dev_val:
-                print("{} - {} - {}".format(devdb[dev].ip, devdb[dev].dname,
-                                            devdb[dev].location))
+    def run_search(attr, val):
+        with DBOpen(run_set.db_name) as connection:
+            dbroot = connection.root()
+            devdb = dbroot[run_set.db_tree]
+            for dev in devdb:
+                try:
+                    dev_val = getattr(devdb[dev], attr)
+                except AttributeError:
+                    continue
+                if val in dev_val and attr is not 'vlans':
+                    print("{} - {} - {} >>> {}".format(
+                        devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
+                        dev_val))
+                elif val in dev_val:
+                    print("{} - {} - {}".format(
+                        devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
+    if field == 'full':
+        for a in ['ip', 'dname', 'contact', 'location', 'model', 'firmware']:
+            run_search(a, value)
+    else:
+        run_search(field, value)
 
 
 def show_cmd(device=None):
@@ -124,34 +145,13 @@ def show_cmd(device=None):
                     print("{} - {}".format(devdb[dev].ip, devdb[dev].location))
         print('Total stored devices - {}'.format(len(devdb.items())))
 
-HELP_MSG = """
-WWmode is a tool for collecting data about devices in network, store it in
-database and search through it.
-    -update :for update database, it automatically check hosts for some errors
-    -search -attr value :search in db for match of value in attr of records
-        -search vlans 505
-    -show: to short output for each record in base
-    -show value: for full output of one record (value for IP or FQDN)
-"""
-if len(sys.argv) < 2:
-    print(HELP_MSG)
-    exit(1)
-elif sys.argv[1] == '-update' and len(sys.argv) > 2:
-    print("Update command doesn't allow options.")
-    exit(1)
-elif sys.argv[1] == '-update':
+if options.update:
     update_cmd()
-elif sys.argv[1] == '-show':
-    if len(sys.argv) == 3:
-        pr_device = sys.argv[2]
-    elif len(sys.argv) > 3:
-        print("Too many options for show command")
-        exit(1)
-    else:
-        pr_device = None
-    show_cmd(pr_device)
-elif sys.argv[1] == '-search':
-    search_db(sys.argv[2][1:], sys.argv[3])
-else:
-    print(HELP_MSG)
-    exit(1)
+elif options.show_all:
+    show_cmd(None)
+elif options.show_dev:
+    show_cmd(options.show_dev)
+elif options.find_vlan:
+    search_db('vlans', options.find_vlan)
+elif options.full_search:
+    search_db('full', options.full_search)
