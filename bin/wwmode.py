@@ -1,8 +1,9 @@
 import time
+import datetime
 import threading
 import logging
 import ipaddress
-from optparse import OptionParser
+from argparse import ArgumentParser
 from queue import Queue
 from ZODB import FileStorage, DB
 from utils.load_settings import Settings
@@ -24,19 +25,28 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-usage = "usage: %prog [options]"
-parser = OptionParser(usage=usage)
-parser.add_option("-u", "--update", dest="update", action="store_true",
-                  help="update DB by sending queries to devices")
-parser.add_option("-s", "--show-all", dest="show_all", action="store_true",
-                  help="show all devices")
-parser.add_option("-d", "--show", dest="show_dev",
-                  help="show device card")
-parser.add_option("-v", "--find-vlan", dest="find_vlan",
-                  help="show all switches with VLAN configured")
-parser.add_option("-f", "--full-search", dest="full_search",
-                  help="show records with match in any field")
-(options, args) = parser.parse_args()
+parser = ArgumentParser(allow_abbrev=False)
+action = parser.add_mutually_exclusive_group(required=True)
+action.add_argument('-U', '--update', dest="action", action="store_const",
+                    const="update", help="start DB update procedure")
+action.add_argument('-S', '--show', dest="action", action="store_const",
+                    const="show", help="show information about devices")
+action.add_argument('-F', '--find', dest="action", action="store_const",
+                    const="find", help="search device cards in DB")
+group_s = parser.add_argument_group('-S', 'show options')
+group_s.add_argument('-a', '--all', dest="show_all", action="store_true",
+                     help="show all devices in compressed fashion")
+group_s.add_argument('-d', '--device', dest="show_dev", metavar="DEVICE",
+                     help="show full device card chosen by FQDN or IP")
+group_s.add_argument('-i', '--inactive', dest="inactive", action="store_true",
+                     help="show devices that was not found by last update")
+group_f = parser.add_argument_group('-F', 'find options')
+group_f.add_argument('-v', '--find-vlan', dest="find_vlan", metavar="VLAN",
+                     help="show all switches with VLAN configured")
+group_f.add_argument('-f', '--full-search', dest="full_search",
+                     metavar="SEARCH",
+                     help="show compressed device cards where SEARCH was found")
+args = parser.parse_args()
 
 run_set = Settings()
 run_set.load_conf()
@@ -107,13 +117,34 @@ def search_db(field, value):
         run_search(field, value)
 
 
-def show_cmd(device=None):
+def show_cmd(device=None, inactive=False, inactivity_time=600):
     '''Print out all records in short or full record for host if it's domain
     name or IP address provided
     Args:
         device - device to be printed (DEFAULT - None)
+        inactive - flag to show only inactive devices (not found by last update)
+            (DEFAULT - False)
+        inactivity_time - time interval between last transaction and
+            device.last_seen to consider device inactive (DEFAULT - 600)
     No return value
     '''
+    storage = FileStorage.FileStorage(run_set.db_name)
+    last_transaction_time = datetime.datetime.fromtimestamp(
+        storage.undoLog(0, 1)[0]['time'])
+    del storage  # delete lock for DBOpen can work next
+
+    def print_devices(device):
+        try:
+            print("{} - {} - {} - {}".format(
+                device.ip, device.dname, device.location,
+                device.model))
+        except AttributeError:
+            try:
+                print("{} - {} - {}".format(
+                    device.ip, device.dname, device.location))
+            except AttributeError:
+                print("{} - {}".format(device.ip, device.location))
+
     with DBOpen(run_set.db_name) as connection:
         dbroot = connection.root()
         devdb = dbroot[run_set.db_tree]
@@ -133,25 +164,29 @@ def show_cmd(device=None):
                     print("No such domain name in DB")
             return
         for dev in devdb:
-            try:
-                print("{} - {} - {} - {}".format(
-                    devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
-                    devdb[dev].model))
-            except AttributeError:
-                try:
-                    print("{} - {} - {}".format(
-                        devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
-                except AttributeError:
-                    print("{} - {}".format(devdb[dev].ip, devdb[dev].location))
-        print('Total stored devices - {}'.format(len(devdb.items())))
+            if not inactive:
+                print_devices(devdb[dev])
+            elif inactive:
+                dev_last_contacted = datetime.datetime.strptime(
+                    devdb[dev].last_seen, '%d-%m-%Y %H:%M')
+                diff = abs((
+                    dev_last_contacted - last_transaction_time).total_seconds())
+                if diff > inactivity_time:
+                    print_devices(devdb[dev])
+        if not inactive:
+            print('Total stored devices - {}'.format(len(devdb.items())))
 
-if options.update:
+if args.action == 'update':
     update_cmd()
-elif options.show_all:
-    show_cmd(None)
-elif options.show_dev:
-    show_cmd(options.show_dev)
-elif options.find_vlan:
-    search_db('vlans', options.find_vlan)
-elif options.full_search:
-    search_db('full', options.full_search)
+elif args.action == 'show':
+    if args.show_all:
+        show_cmd(None)
+    elif args.show_dev:
+        show_cmd(args.show_dev)
+    elif args.inactive:
+        show_cmd(inactive=True)
+elif args.action == 'find':
+    if args.find_vlan:
+        search_db('vlans', args.find_vlan)
+    elif args.full_search:
+        search_db('full', args.full_search)
