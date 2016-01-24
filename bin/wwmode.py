@@ -46,6 +46,14 @@ group_f.add_argument('-v', '--find-vlan', dest="find_vlan", metavar="VLAN",
 group_f.add_argument('-f', '--full-search', dest="full_search",
                      metavar="SEARCH",
                      help="show compressed device cards where SEARCH was found")
+group_f.add_argument('-o', '--older-software', dest="older_software",
+                     metavar="MODEL VERSION", nargs=2,
+                     help='''show all switches of MODEL with older VERSION of
+                     software''')
+group_f.add_argument('-n', '--newer-software', dest="newer_software",
+                     metavar="MODEL VERSION", nargs=2,
+                     help='''show all switches of MODEL with newer VERSION of
+                     software''')
 args = parser.parse_args()
 
 run_set = Settings()
@@ -117,6 +125,24 @@ def search_db(field, value):
         run_search(field, value)
 
 
+def print_devices(device):
+    '''Print device card in compressed fashion
+    Args:
+        device - device to print
+    No return value
+    '''
+    try:
+        print("{} - {} - {} - {}".format(
+            device.ip, device.dname, device.location,
+            device.model))
+    except AttributeError:
+        try:
+            print("{} - {} - {}".format(
+                device.ip, device.dname, device.location))
+        except AttributeError:
+            print("{} - {}".format(device.ip, device.location))
+
+
 def show_cmd(device=None, inactive=False, inactivity_time=600):
     '''Print out all records in short or full record for host if it's domain
     name or IP address provided
@@ -132,19 +158,6 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
     last_transaction_time = datetime.datetime.fromtimestamp(
         storage.undoLog(0, 1)[0]['time'])
     del storage  # delete lock for DBOpen can work next
-
-    def print_devices(device):
-        try:
-            print("{} - {} - {} - {}".format(
-                device.ip, device.dname, device.location,
-                device.model))
-        except AttributeError:
-            try:
-                print("{} - {} - {}".format(
-                    device.ip, device.dname, device.location))
-            except AttributeError:
-                print("{} - {}".format(device.ip, device.location))
-
     with DBOpen(run_set.db_name) as connection:
         dbroot = connection.root()
         devdb = dbroot[run_set.db_tree]
@@ -176,6 +189,43 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
         if not inactive:
             print('Total stored devices - {}'.format(len(devdb.items())))
 
+
+def software_search(model, version, older=True):
+    '''Search for software older or newer then provided
+    Args:
+        model - devices of what model we search
+        version - software version for comparison with
+        older - do we search older or newer software (DEFAULT - True)
+    No return value
+    '''
+
+    def check_soft(one, another):
+        '''Helper function for search or greter or lesser
+        Args:
+            one - first comparison value
+            other - second comparison value
+        Return:
+            True of False - result of comparison
+        '''
+        if older and another < one:
+            return True
+        elif not older and another > one:
+            return True
+        else:
+            return False
+
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        for dev in devdb:
+            try:
+                devdb[dev].model
+            except AttributeError:
+                continue
+            if model.upper() in devdb[dev].model and check_soft(
+                    version, devdb[dev].firmware):
+                print_devices(devdb[dev])
+
 if args.action == 'update':
     update_cmd()
 elif args.action == 'show':
@@ -190,3 +240,7 @@ elif args.action == 'find':
         search_db('vlans', args.find_vlan)
     elif args.full_search:
         search_db('full', args.full_search)
+    elif args.older_software:
+        software_search(*args.older_software)
+    elif args.newer_software:
+        software_search(*args.newer_software, older=False)
