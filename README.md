@@ -29,6 +29,8 @@ You can search for VLANs straight with *-v/--find-vlan TAG* option.
 To find switches with firmware older or newer than given use 
 *-o/--older-software MODEL VERSION* or *-n/--newer-software MODEL VERSION* 
 respectively.
+To find switches with firmware version older than newest one in DB use
+*-t/--outdated* option.
 
 ### Show
 
