@@ -25,6 +25,8 @@ class Settings:
         location - indicator of what to do with device location:
             straight - nothing to do
             name of a schema in lexicon/schemas - translit using that schema
+        domain_prefix - prefix for domain name
+        default_zone - suffix for domain name (domain zone)
     instance attrs witch assigned by load_conf method described in app docs
     methods:
         overloaded __init__
@@ -40,12 +42,15 @@ class Settings:
         self.allowed_params = ('num_threads', 'subnet', 'unneded_vlans',
                                'uplink_pattern', 'ro_community', 'location',
                                'allowed_vlans', 'db_name', 'db_tree',
-                               'supply_zone', 'default_zone', 'default_role')
+                               'supply_zone', 'default_zone', 'default_role',
+                               'domain_prefix')
         self.subnets = []
         self.hosts = []
         self.unneded_vlans = []
         self.allowed_vlans = []
         self.location = 'straight'
+        self.domain_prefix = ''
+        self.default_zone = ''
 
     def load_conf(self):
         '''Parse configuration file and fill instance with attributes

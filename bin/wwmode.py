@@ -171,10 +171,25 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
                 else:
                     print("No device with that IP in DB")
             except ValueError:
+                # there can be couple of items with 'device' in dname so we
+                # make a list and choose first
+                mod = ''
+                if len(device.split('.')) == 1:
+                    mod = (run_set.domain_prefix + device + '.' +
+                           run_set.default_zone)
+                elif len(device.split('.')) == 2:
+                    mod = device + '.' + run_set.default_zone
+                elif run_set.default_zone and len(device.split('.')) == len(
+                        run_set.default_zone.split('.')) + 1:
+                    mod = run_set.domain_prefix + device
                 q_list = list(
                     [devdb[x] for x in devdb if devdb[x].dname == device])
+                m_list = list(
+                    [devdb[x] for x in devdb if devdb[x].dname == mod])
                 if q_list:
                     print(q_list[0])
+                elif m_list:
+                    print(m_list[0])
                 else:
                     print("No such domain name in DB")
             return
