@@ -8,13 +8,14 @@ As of now it support db update and some search operations.
 
 ### Update
 
-To update a db simply run it with *-u/--update* key. It take some time, log any
+To update a db simply run it with *-U/--update* key. It take some time, log any
 intresting events and even check hosts for some errors.
 
 ### Search
 
-To search through db records use *-f/--full-search value* key. 
-For example: `-f info` to find devices with 'info' string in any of that
+*-F Group*
+To search through db records use *-f/--full-search VALUE* key. 
+For example: `-F -f info` to find devices with 'info' string in any of that
 field:
     
     * IPv4 address - ip
@@ -24,9 +25,14 @@ field:
     * Device model - model
     * Firmware version - firmware
 
-You can search for VLANs straight with *-v/--find-vlan tag* option.
+You can search for VLANs straight with *-v/--find-vlan TAG* option.
+To find switches with firmware older or newer than given use 
+*-o/--older-software MODEL VERSION* or *-n/--newer-software MODEL VERSION* 
+respectively.
 
 ### Show
 
-To show all records in short use *-s/--show-all* key. To show full output on one
-record use *-d/--show value* where value can be an IPv4 address or FQDN.
+*-S Group*
+To show all records in short use *-a/--all* key. To show full output on one
+record use *-d/--device DEVICE* where value can be an IPv4 address or FQDN. To show
+switches considered inactive (not contacted last time) use *-i/--inactive* key.

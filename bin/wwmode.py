@@ -27,31 +27,31 @@ logger.addHandler(ch)
 
 parser = ArgumentParser(allow_abbrev=False)
 action = parser.add_mutually_exclusive_group(required=True)
-action.add_argument('-U', '--update', dest="action", action="store_const",
-                    const="update", help="start DB update procedure")
-action.add_argument('-S', '--show', dest="action", action="store_const",
-                    const="show", help="show information about devices")
-action.add_argument('-F', '--find', dest="action", action="store_const",
-                    const="find", help="search device cards in DB")
+action.add_argument('-U', '--update', dest='action', action='store_const',
+                    const='update', help='start DB update procedure')
+action.add_argument('-S', '--show', dest='action', action='store_const',
+                    const='show', help='show information about devices')
+action.add_argument('-F', '--find', dest='action', action='store_const',
+                    const='find', help='search device cards in DB')
 group_s = parser.add_argument_group('-S', 'show options')
-group_s.add_argument('-a', '--all', dest="show_all", action="store_true",
-                     help="show all devices in compressed fashion")
-group_s.add_argument('-d', '--device', dest="show_dev", metavar="DEVICE",
-                     help="show full device card chosen by FQDN or IP")
-group_s.add_argument('-i', '--inactive', dest="inactive", action="store_true",
-                     help="show devices that was not found by last update")
+group_s.add_argument('-a', '--all', dest='show_all', action='store_true',
+                     help='show all devices in compressed fashion')
+group_s.add_argument('-d', '--device', dest='show_dev', metavar='DEVICE',
+                     help='show full device card chosen by FQDN or IP')
+group_s.add_argument('-i', '--inactive', dest='inactive', action='store_true',
+                     help='show devices that was not found by last update')
 group_f = parser.add_argument_group('-F', 'find options')
-group_f.add_argument('-v', '--find-vlan', dest="find_vlan", metavar="VLAN",
-                     help="show all switches with VLAN configured")
-group_f.add_argument('-f', '--full-search', dest="full_search",
-                     metavar="SEARCH",
-                     help="show compressed device cards where SEARCH was found")
-group_f.add_argument('-o', '--older-software', dest="older_software",
-                     metavar="MODEL VERSION", nargs=2,
+group_f.add_argument('-v', '--find-vlan', dest='find_vlan', metavar='VLAN',
+                     help='show all switches with VLAN configured')
+group_f.add_argument('-f', '--full-search', dest='full_search',
+                     metavar='SEARCH',
+                     help='show compressed device cards where SEARCH was found')
+group_f.add_argument('-o', '--older-software', dest='older_software',
+                     metavar=('MODEL', 'VERSION'), nargs=2,
                      help='''show all switches of MODEL with older VERSION of
                      software''')
-group_f.add_argument('-n', '--newer-software', dest="newer_software",
-                     metavar="MODEL VERSION", nargs=2,
+group_f.add_argument('-n', '--newer-software', dest='newer_software',
+                     metavar=('MODEL', 'VERSION'), nargs=2,
                      help='''show all switches of MODEL with newer VERSION of
                      software''')
 args = parser.parse_args()
