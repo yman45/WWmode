@@ -54,6 +54,8 @@ group_f.add_argument('-n', '--newer-software', dest='newer_software',
                      metavar=('MODEL', 'VERSION'), nargs=2,
                      help='''show all switches of MODEL with newer VERSION of
                      software''')
+group_f.add_argument('-t', '--outdated', dest='outdated', action="store_true",
+                     help='show devices with outdated software')
 args = parser.parse_args()
 
 run_set = Settings()
@@ -226,6 +228,29 @@ def software_search(model, version, older=True):
                     version, devdb[dev].firmware):
                 print_devices(devdb[dev])
 
+
+def find_newest_firmware():
+    '''Find newest firmware in DB(!) for every device model in DB
+    No args
+    Return:
+        model, version - model of device, latest firmware for that model
+    '''
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        d = {}
+        for dev in devdb:
+            try:
+                devdb[dev].model
+            except AttributeError:
+                continue
+            if devdb[dev].model not in d or (
+                    devdb[dev].firmware > d[devdb[dev].model]):
+                d[devdb[dev].model] = devdb[dev].firmware
+    print(d)
+    for model in d:
+        yield model, d[model]
+
 if args.action == 'update':
     update_cmd()
 elif args.action == 'show':
@@ -244,3 +269,6 @@ elif args.action == 'find':
         software_search(*args.older_software)
     elif args.newer_software:
         software_search(*args.newer_software, older=False)
+    elif args.outdated:
+        for model, version in find_newest_firmware():
+            software_search(model, version)
