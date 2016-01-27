@@ -280,7 +280,7 @@ def generate_tacacs_list():
         dbroot = connection.root()
         devdb = dbroot[run_set.db_tree]
         for dev in devdb:
-            if devdb[dev].dname.startswith(('n', 's')):
+            if devdb[dev].dname.startswith(('n', 's', 'vc')):
                 node_type = 'nodes'
             else:
                 node_type = 'sites'
