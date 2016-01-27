@@ -38,3 +38,10 @@ To find switches with firmware version older than newest one in DB use
 To show all records in short use *-a/--all* key. To show full output on one
 record use *-d/--device DEVICE* where value can be an IPv4 address or FQDN. To show
 switches considered inactive (not contacted last time) use *-i/--inactive* key.
+
+
+### Generate
+
+*-G group*
+Generate usefull info from DB records. To generate a TACACS+ allowed\_hosts list
+for before.sh script use *--tacacs* key.

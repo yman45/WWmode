@@ -33,6 +33,8 @@ action.add_argument('-S', '--show', dest='action', action='store_const',
                     const='show', help='show information about devices')
 action.add_argument('-F', '--find', dest='action', action='store_const',
                     const='find', help='search device cards in DB')
+action.add_argument('-G', '--generate', dest='action', action='store_const',
+                    const='generate', help='generate usefull info from DB')
 group_s = parser.add_argument_group('-S', 'show options')
 group_s.add_argument('-a', '--all', dest='show_all', action='store_true',
                      help='show all devices in compressed fashion')
@@ -54,8 +56,11 @@ group_f.add_argument('-n', '--newer-software', dest='newer_software',
                      metavar=('MODEL', 'VERSION'), nargs=2,
                      help='''show all switches of MODEL with newer VERSION of
                      software''')
-group_f.add_argument('-t', '--outdated', dest='outdated', action="store_true",
+group_f.add_argument('-t', '--outdated', dest='outdated', action='store_true',
                      help='show devices with outdated software')
+group_g = parser.add_argument_group('-G', 'generate option')
+group_g.add_argument('--tacacs', dest='tacacs', action='store_true',
+                     help='generate list of hosts for tacacs')
 args = parser.parse_args()
 
 run_set = Settings()
@@ -266,6 +271,21 @@ def find_newest_firmware():
     for model in d:
         yield model, d[model]
 
+
+def generate_tacacs_list():
+    '''Generate list of allowed hosts for TACACS+ before.sh script
+    No args & return values
+    '''
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        for dev in devdb:
+            if devdb[dev].dname.startswith(('n', 's')):
+                node_type = 'nodes'
+            else:
+                node_type = 'sites'
+            print('{} {} {}'.format(node_type, devdb[dev].ip, devdb[dev].dname))
+
 if args.action == 'update':
     update_cmd()
 elif args.action == 'show':
@@ -287,3 +307,6 @@ elif args.action == 'find':
     elif args.outdated:
         for model, version in find_newest_firmware():
             software_search(model, version)
+elif args.action == 'generate':
+    if args.tacacs:
+        generate_tacacs_list()
