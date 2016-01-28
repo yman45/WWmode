@@ -180,7 +180,7 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
                 # make a list and choose first
                 mod = ''
                 if len(device.split('.')) == 1:
-                    mod = (run_set.domain_prefix + device + '.' +
+                    mod = (run_set.domain_prefix + '.' + device + '.' +
                            run_set.default_zone)
                 elif len(device.split('.')) == 2:
                     mod = device + '.' + run_set.default_zone
