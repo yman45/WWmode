@@ -212,6 +212,19 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
             print('Total stored devices - {}'.format(len(devdb.items())))
 
 
+def device_generator():
+    '''Open ZODB, unpack device records and yields it one at a time.
+    No args
+    Return:
+        devdb[dev] - device record from DB
+    '''
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        for dev in devdb:
+            yield devdb[dev]
+
+
 def software_search(model, version, older=True):
     '''Search for software older or newer then provided
     Args:
@@ -235,18 +248,14 @@ def software_search(model, version, older=True):
             return True
         else:
             return False
-
-    with DBOpen(run_set.db_name) as connection:
-        dbroot = connection.root()
-        devdb = dbroot[run_set.db_tree]
-        for dev in devdb:
-            try:
-                devdb[dev].model
-            except AttributeError:
-                continue
-            if model.upper() in devdb[dev].model and check_soft(
-                    version, devdb[dev].firmware):
-                print_devices(devdb[dev])
+    for dev in device_generator():
+        try:
+            dev.model
+        except AttributeError:
+            continue
+        if model.upper() in dev.model and check_soft(
+                version, dev.firmware):
+            print_devices(dev)
 
 
 def find_newest_firmware():
@@ -255,18 +264,15 @@ def find_newest_firmware():
     Return:
         model, version - model of device, latest firmware for that model
     '''
-    with DBOpen(run_set.db_name) as connection:
-        dbroot = connection.root()
-        devdb = dbroot[run_set.db_tree]
-        d = {}
-        for dev in devdb:
-            try:
-                devdb[dev].model
-            except AttributeError:
-                continue
-            if devdb[dev].model not in d or (
-                    devdb[dev].firmware > d[devdb[dev].model]):
-                d[devdb[dev].model] = devdb[dev].firmware
+    d = {}
+    for dev in device_generator():
+        try:
+            dev.model
+        except AttributeError:
+            continue
+        if dev.model not in d or (
+                dev.firmware > d[dev.model]):
+            d[dev.model] = dev.firmware
     print(d)
     for model in d:
         yield model, d[model]
@@ -276,15 +282,12 @@ def generate_tacacs_list():
     '''Generate list of allowed hosts for TACACS+ before.sh script
     No args & return values
     '''
-    with DBOpen(run_set.db_name) as connection:
-        dbroot = connection.root()
-        devdb = dbroot[run_set.db_tree]
-        for dev in devdb:
-            if devdb[dev].dname.startswith(('n', 's', 'vc')):
-                node_type = 'nodes'
-            else:
-                node_type = 'sites'
-            print('{} {} {}'.format(node_type, devdb[dev].ip, devdb[dev].dname))
+    for dev in device_generator():
+        if dev.dname.startswith(('n', 's', 'vc')):
+            node_type = 'nodes'
+        else:
+            node_type = 'sites'
+        print('{} {} {}'.format(node_type, dev.ip, dev.dname))
 
 if args.action == 'update':
     update_cmd()
