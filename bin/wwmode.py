@@ -42,6 +42,8 @@ group_s.add_argument('-d', '--device', dest='show_dev', metavar='DEVICE',
                      help='show full device card chosen by FQDN or IP')
 group_s.add_argument('-i', '--inactive', dest='inactive', action='store_true',
                      help='show devices that was not found by last update')
+group_s.add_argument('-u', '--uplink-chain', dest='uplink_chain',
+                     metavar='DEVICE', help='print device uplink chain')
 group_f = parser.add_argument_group('-F', 'find options')
 group_f.add_argument('-v', '--find-vlan', dest='find_vlan', metavar='VLAN',
                      help='show all switches with VLAN configured')
@@ -150,21 +152,48 @@ def print_devices(device):
             print("{} - {}".format(device.ip, device.location))
 
 
-def show_cmd(device=None, inactive=False, inactivity_time=600):
-    '''Print out all records in short or full record for host if it's domain
-    name or IP address provided
+def show_all_records(inactive=False, inactivity_time=600):
+    '''Print out all DB records in compressed fashion.
     Args:
-        device - device to be printed (DEFAULT - None)
-        inactive - flag to show only inactive devices (not found by last update)
-            (DEFAULT - False)
-        inactivity_time - time interval between last transaction and
-            device.last_seen to consider device inactive (DEFAULT - 600)
+        inactive - if that flag in True state, print only inactive devices
+            (not contacted in last update run (see next arg)) (DEFAULT - False)
+        inactivity_time - consider device inactive if that time of seconds
+            elapsed betwen update time and device last_seen (update time -
+            time of last DB transaction, there can be some minutes between
+            first device update and last transaction) (DEFAULT - 600)
     No return value
     '''
-    storage = FileStorage.FileStorage(run_set.db_name)
-    last_transaction_time = datetime.datetime.fromtimestamp(
-        storage.undoLog(0, 1)[0]['time'])
-    del storage  # delete lock for DBOpen can work next
+    if inactive:
+        storage = FileStorage.FileStorage(run_set.db_name)
+        last_transaction_time = datetime.datetime.fromtimestamp(
+            storage.undoLog(0, 1)[0]['time'])
+        del storage  # delete lock for DBOpen can work next
+        counter = 0
+    for num, dev in enumerate(device_generator()):
+        if not inactive:
+            print_devices(dev)
+        else:
+            dev_last_contacted = datetime.datetime.strptime(
+                dev.last_seen, '%d-%m-%Y %H:%M')
+            diff = abs((
+                dev_last_contacted - last_transaction_time).total_seconds())
+            if diff > inactivity_time:
+                print_devices(dev)
+                counter += 1
+    count = counter if inactive else num
+    print('Total showed devices - {}'.format(count))
+
+
+def show_single_device(device, quiet=False):
+    '''Print full device record and return device object. Device can be quried
+    by IP address or domain name (FQDN or just main part, function add default
+    domain and default prefix on it's own.
+    Args:
+        device - IP address or domain name
+        quiet - don't print record
+    Return:
+        device object
+    '''
     with DBOpen(run_set.db_name) as connection:
         dbroot = connection.root()
         devdb = dbroot[run_set.db_tree]
@@ -178,6 +207,7 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
             except ValueError:
                 # there can be couple of items with 'device' in dname so we
                 # make a list and choose first
+                rec = ''
                 mod = ''
                 if len(device.split('.')) == 1:
                     mod = (run_set.domain_prefix + '.' + device + '.' +
@@ -192,24 +222,15 @@ def show_cmd(device=None, inactive=False, inactivity_time=600):
                 m_list = list(
                     [devdb[x] for x in devdb if devdb[x].dname == mod])
                 if q_list:
-                    print(q_list[0])
+                    rec = q_list[0]
                 elif m_list:
-                    print(m_list[0])
-                else:
-                    print("No such domain name in DB")
-            return
-        for dev in devdb:
-            if not inactive:
-                print_devices(devdb[dev])
-            elif inactive:
-                dev_last_contacted = datetime.datetime.strptime(
-                    devdb[dev].last_seen, '%d-%m-%Y %H:%M')
-                diff = abs((
-                    dev_last_contacted - last_transaction_time).total_seconds())
-                if diff > inactivity_time:
-                    print_devices(devdb[dev])
-        if not inactive:
-            print('Total stored devices - {}'.format(len(devdb.items())))
+                    rec = m_list[0]
+                if not quiet:
+                    if rec:
+                        print(rec)
+                    else:
+                        print("No such domain name in DB")
+                return rec
 
 
 def device_generator():
@@ -289,16 +310,42 @@ def generate_tacacs_list():
             node_type = 'sites'
         print('{} {} {}'.format(node_type, dev.ip, dev.dname))
 
-if args.action == 'update':
-    update_cmd()
-elif args.action == 'show':
+
+def go_high(device):
+    '''Print device uplink chain from given device to upper level that can
+    be find
+    Args:
+        device - IP address or domain name of device (FQDN or main part)
+    No return value
+    '''
+    dev = show_single_device(device, quiet=True)
+    if not dev:
+        return
+    print(dev.location)
+    for up in dev.uplinks:
+        go_high(up[0].split('@')[-1])
+    else:
+        print('-' * 10)
+
+
+def show_cmd():
+    '''Interlayer function for different show command execution
+    based on provided CLI args
+    '''
     if args.show_all:
-        show_cmd(None)
+        show_all_records()
     elif args.show_dev:
-        show_cmd(args.show_dev)
+        show_single_device(args.show_dev)
     elif args.inactive:
-        show_cmd(inactive=True)
-elif args.action == 'find':
+        show_all_records(inactive=True)
+    elif args.uplink_chain:
+        go_high(args.uplink_chain)
+
+
+def find_cmd():
+    '''Interlayer function for different find command execution
+    based on provided CLI args
+    '''
     if args.find_vlan:
         search_db('vlans', args.find_vlan)
     elif args.full_search:
@@ -310,6 +357,19 @@ elif args.action == 'find':
     elif args.outdated:
         for model, version in find_newest_firmware():
             software_search(model, version)
-elif args.action == 'generate':
+
+
+def generate_cmd():
+    '''Interlayer function for different generate command execution
+    based on provided CLI args
+    '''
     if args.tacacs:
         generate_tacacs_list()
+
+action_dict = {
+    'update': update_cmd,
+    'show': show_cmd,
+    'find': find_cmd,
+    'generate': generate_cmd
+}
+action_dict[args.action]()
