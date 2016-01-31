@@ -1,4 +1,5 @@
 import logging
+import datetime
 import transaction
 from ZODB import FileStorage, DB
 
@@ -65,3 +66,17 @@ def db_check(db_name, db_tree):
             from BTrees.OOBTree import OOBTree
             dbroot[db_tree] = OOBTree()
             transaction.commit()
+
+
+def get_last_transaction_time(db):
+    '''Get time of last DB transaction
+    Args:
+        db - name of DB
+    Return:
+        time of last transaction
+    '''
+    storage = FileStorage.FileStorage(db)
+    last_transaction_time = datetime.datetime.fromtimestamp(
+        storage.undoLog(0, 1)[0]['time'])
+    del storage  # delete DB lock
+    return last_transaction_time
