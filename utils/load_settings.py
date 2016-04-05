@@ -21,7 +21,6 @@ class Settings:
         subnets - IPv4 subnets where devices must be discovered
         hosts - IPv4 addresses of standalone hosts
         unneded_vlans - VLAN list that don't need to be saved in device record
-        allowed_vlans - VLAN list that allowed to be configured on device
         location - indicator of what to do with device location:
             straight - nothing to do
             name of a schema in lexicon/schemas - translit using that schema
@@ -41,13 +40,12 @@ class Settings:
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
         self.allowed_params = ('num_threads', 'subnet', 'unneded_vlans',
                                'uplink_pattern', 'ro_community', 'location',
-                               'allowed_vlans', 'db_name', 'db_tree',
-                               'supply_zone', 'default_zone', 'default_role',
+                               'db_name', 'db_tree', 'supply_zone',
+                               'default_zone', 'default_role',
                                'domain_prefix')
         self.subnets = []
         self.hosts = []
         self.unneded_vlans = []
-        self.allowed_vlans = []
         self.location = 'straight'
         self.domain_prefix = ''
         self.default_zone = ''
@@ -70,14 +68,6 @@ class Settings:
                     elif parameter == 'unneded_vlans':
                         self.unneded_vlans.extend(
                             [x.strip() for x in value.split(',')])
-                    elif parameter == 'allowed_vlans':
-                        for prt in value.split(','):
-                            if '-' in prt:
-                                prt1, prt2 = prt.strip().split('-')
-                                self.allowed_vlans.extend(range(int(prt1),
-                                                                int(prt2)))
-                            else:
-                                self.allowed_vlans.append(int(prt.strip()))
                     elif parameter in self.allowed_params:
                         self.__setattr__(parameter, value)
                     else:

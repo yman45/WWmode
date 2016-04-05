@@ -66,7 +66,6 @@ class Device(Persistent):
         identify
         test_domain_name
         translit_location
-        check_host
     '''
     num_instances = 0
     founded_hosts = 0
@@ -203,28 +202,6 @@ class Device(Persistent):
         except OSError:
             pass
 
-    def check_host(self, settings):
-        '''Check host on typical errors (contact or location absence
-        for example) and logs it
-        Args:
-            settings - instance of utils.load_settings.Settings
-        No return value
-        '''
-        if not self.location:
-            logging.error('{}: System: No location for host'.format(self.ip))
-        if not self.contact:
-            logging.error('{}: System: No contact for host'.format(self.ip))
-        elif not re.match(r'(se|ls|lc)\d@intertax.ru', self.contact.strip()):
-            logging.error('{}: System: Not useful contact {}'.format(
-                self.ip, self.contact))
-        if settings.allowed_vlans:
-            out_of_range_vlans = (
-                [x for x in self.vlans if int(x) not in settings.allowed_vlans])
-            if out_of_range_vlans:
-                logging.warning(
-                    '{}: VLAN DB: not allowed VLANs {} configured on host.'
-                    .format(self.ip, out_of_range_vlans))
-
 
 def worker(queue, settings, db):
     '''Update database by send request on all suplied hosts. Function designed
@@ -309,5 +286,4 @@ def worker(queue, settings, db):
             logging.info('{} ----> {}'.format(host, device.model))
         else:
             logging.info('{} unrecognized...'.format(host))
-        device.check_host(settings)
         queue.task_done()
