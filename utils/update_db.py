@@ -14,18 +14,7 @@ from utils.wwmode_exception import WWModeException
 # Retrive all cards once when module imported
 device_cards = retrive()
 
-dtnow = datetime.datetime.now()
-logfile = 'logs/update_db_' + dtnow.strftime('%d-%m-%Y_%H-%M') + '.log'
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s : %(message)s',
-                    datefmt='%d %B %Y %H:%M:%S',
-                    filename=logfile,
-                    filemode='w')
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-console.setFormatter(formatter)
-logging.getLogger('').addHandler(console)
+m_logger = logging.getLogger('wwmode_app.utils.update_db')
 
 
 class SupplyZoneNameError(WWModeException):
@@ -82,7 +71,7 @@ class Device(Persistent):
         self.vlans = []
         self.uplinks = []
         Device.num_instances += 1
-        logging.info('{}: New device: new device found'.format(self.ip))
+        m_logger.info('{}: New device: new device found'.format(self.ip))
 
     def __str__(self):
         '''Print out device record. Domain name concatenated first because
@@ -122,9 +111,9 @@ class Device(Persistent):
         Return:
             new_state
         '''
-        logging.warning('''{}: DB conflict: got a conflict, new - {}, old - {},
-                        saved - {}'''.format(self.ip, new_state, old_state,
-                                             saved_state))
+        m_logger.warning('''{}: DB conflict: got a conflict, new - {}, old - {}
+                         , saved - {}'''.format(self.ip, new_state, old_state,
+                                                saved_state))
         return new_state
 
     def identify(self, descr):
@@ -151,13 +140,13 @@ class Device(Persistent):
             try:
                 return_ip = socket.gethostbyname(self.dname)
                 if self.ip != return_ip:
-                    logging.error('{}: DNS: A record not same as PTR'.format(
+                    m_logger.error('{}: DNS: A record not same as PTR'.format(
                         self.ip))
             except socket.gaierror:
-                logging.error('{}: DNS: No A record on received PTR'.format(
+                m_logger.error('{}: DNS: No A record on received PTR'.format(
                     self.ip))
         except socket.herror:
-            logging.error('{}: DNS: No PTR record for that host'.format(
+            m_logger.error('{}: DNS: No PTR record for that host'.format(
                 self.ip))
             self.dname = ''
 
@@ -255,9 +244,10 @@ def worker(queue, settings, db):
                 device.check_supply_zone(settings.supply_zone,
                                          len(settings.default_zone.split('.')))
             except SupplyZoneNameError:
-                logging.error('DNS: Incorrect parameters for supply zone check')
+                m_logger.error(
+                    'DNS: Incorrect parameters for supply zone check')
             except NoNameInSupplyZone:
-                logging.error('{}: DNS: no domain name in {} zone'.format(
+                m_logger.error('{}: DNS: no domain name in {} zone'.format(
                     device.ip, settings.supply_zone))
         model_oid = device.identify(value)
         if model_oid:
@@ -283,7 +273,7 @@ def worker(queue, settings, db):
                     if_speed = if_speed + ' Mb/s'
                     all_uplinks.append((if_descr, if_speed))
             device.uplinks = all_uplinks
-            logging.info('{} ----> {}'.format(host, device.model))
+            m_logger.info('{} ----> {}'.format(host, device.model))
         else:
-            logging.info('{} unrecognized...'.format(host))
+            m_logger.info('{} unrecognized...'.format(host))
         queue.task_done()

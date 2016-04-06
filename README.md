@@ -25,7 +25,7 @@ field:
     * Device model - model
     * Firmware version - firmware
 
-You can search for VLAN chains straight with *-v/--find-vlan TAG* option.
+You can search for VLAN chains straight with *-l/--find-vlan TAG* option.
 To show device chain from some device to top *-c/--chain DEVICE* option,
 where DEVICE are FQDN or IPv4.
 To find switches with firmware older than given use 
@@ -47,3 +47,6 @@ For Nagios list use *-N/--nagios*.
 For DNS records - *-D/--dns*.
 For Trac records - *-K/--trac*.
 For RANCID db - *-R/--rancid*.
+
+### Verbose output
+For verbose output to console use *-v/--verbose* up to 2 times.

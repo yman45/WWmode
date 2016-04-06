@@ -67,7 +67,7 @@ def process_output(error_indication, error_status, error_index, var_binds,
         value - response on query
     '''
     if error_indication:
-        m_logger.info('{} at {}'.format(error_indication, address))
+        m_logger.debug('{} at {}'.format(error_indication, address))
         return None, None
     elif error_status:
         m_logger.error('{} with {} at {}'.format(

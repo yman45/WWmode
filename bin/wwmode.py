@@ -1,20 +1,7 @@
 import logging
+import logging.handlers
 from argparse import ArgumentParser
 from utils import maintools
-
-logger = logging.getLogger('wwmode_app')
-logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logs/devdb.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    '%d %B %Y %H:%M:%S.%03d')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
 
 parser = ArgumentParser()
 action = parser.add_mutually_exclusive_group(required=True)
@@ -33,11 +20,11 @@ group_s.add_argument('-i', '--inactive', dest='inactive', action='store_true',
                      help='show devices that was not found in last update')
 group_s.add_argument('-c', '--chain', dest='uplink_chain',
                      metavar='DEVICE', help='show device uplink chain')
-group_s.add_argument('-v', '--vlan-chain', dest='find_vlan', metavar='VLAN',
+group_s.add_argument('-l', '--vlan-chain', dest='find_vlan', metavar='VLAN',
                      help='show devices chain with VLAN configured')
-group_s.add_argument('-f', '--full-search', dest='full_search',
-                     metavar='SEARCH',
-                     help='show compressed device cards where SEARCH was found')
+group_s.add_argument(
+    '-f', '--full-search', dest='full_search', metavar='SEARCH',
+    help='show compressed device cards where SEARCH was found')
 group_s.add_argument('-m', '--model', dest='model_search', metavar='MODEL',
                      help='show devices wich model name contain MODEL')
 group_s.add_argument('-t', '--older-than', dest='older_software',
@@ -57,7 +44,34 @@ group_g.add_argument('-K', '--kbase', dest='kbase', action='store_true',
                      help='generate list of hosts for Trac knowledge base')
 group_g.add_argument('-R', '--rancid', dest='rancid', action='store_true',
                      help='generate list of hosts for RANCID')
+parser.add_argument('-v', '--verbose', dest='verbose', action='count',
+                    help='verbose output into console; upto -vv')
 args = parser.parse_args()
+
+logger = logging.getLogger('wwmode_app')
+logger.setLevel(logging.DEBUG)
+if args.action == 'update':
+    fh = logging.handlers.RotatingFileHandler(
+        'logs/update_db.log', maxBytes=10000000, backupCount=9,
+        encoding='utf-8')
+else:
+    fh = logging.FileHandler('logs/queries.log')
+fh.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+if args.verbose:
+    if args.verbose > 1:
+        ch.setLevel(logging.DEBUG)
+    else:
+        ch.setLevel(logging.INFO)
+else:
+    ch.setLevel(logging.ERROR)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    '%d %B %Y %H:%M:%S.%03d')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 
 def update_cmd():
