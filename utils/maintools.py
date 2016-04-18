@@ -3,11 +3,13 @@ import time
 import threading
 import ipaddress
 import logging
+import re
 from queue import Queue
 from ZODB import FileStorage, DB
 from utils.load_settings import Settings
 from utils.update_db import worker, Device
 from utils.dbutils import db_check, DBOpen, get_last_transaction_time
+from lexicon.translate import convert
 
 m_logger = logging.getLogger('wwmode_app.utils.utils')
 run_set = Settings()
@@ -117,7 +119,7 @@ def show_all_records(inactive=False, inactivity_time=600):
     '''
     if inactive:
         last_transaction_time = get_last_transaction_time(run_set.db_name)
-        counter = 0
+        counter = 1
     for num, dev in enumerate(device_generator()):
         if not inactive:
             print_devices(dev)
@@ -257,6 +259,61 @@ def generate_tacacs_list():
         else:
             node_type = 'sites'
         print('{} {} {}'.format(node_type, dev.ip, dev.dname))
+
+
+def generate_dns_list():
+    '''Generate list of DNS records based on SNMP location
+    Output of that function can be very weird and most likely
+    need manual intervention!
+    No args & return values
+    '''
+    for dev in device_generator():
+        if not dev.location:
+            continue
+        dev_loc = convert(dev.location, schema=run_set.location).lower()
+        dev_loc = dev_loc.replace("'", "").replace(".", "").split(",")[0]
+        print('#{}'.format(dev.location))
+        print('{}\t\t\tIN A\t\t\t{}'.format(generate_dname(dev_loc, 'p', '1'),
+                                            dev.ip))
+
+
+def generate_dname(address, role, number):
+    vowels = ('a', 'e', 'i', 'o', 'u', 'y')
+    address = address.lower().replace('`', '')
+    location_pattern = re.compile(
+        r'^(?P<fnum>\d{0,4})(?:-.{1,3} )?(?P<street>.+?) (?P<lnum>\d{1,3}.*)$')
+    location_match = location_pattern.match(address)
+    if not location_match:
+        return role + number + '.' + address.replace(' ', '')
+    middle_part = location_match.group('street')
+    if len(middle_part.split()) > 1:
+        middle_part_split = middle_part.split()
+        middle_part_last_word = middle_part_split.pop(-1)
+        middle_part = ''
+        for word in middle_part_split:
+            middle_part += word[0]
+        middle_part += middle_part_last_word
+    tmp_word = ''
+    for num, letter in enumerate(middle_part):
+        if num > 2 and letter not in vowels:
+            break
+        tmp_word += letter
+    if middle_part[num-1] in vowels:
+        tmp_word += middle_part[num]
+    last_part = ''
+    for part in location_match.group('lnum').split():
+        if part[0].isdigit():
+            last_part += part
+        else:
+            last_part += part[0]
+    dname = ''
+    for part in [location_match.group('fnum'), tmp_word, last_part]:
+        if part:
+            dname += part
+    if role == 'p' and number == '1':
+        return dname
+    else:
+        return role + number + '.' + dname
 
 
 def go_high(device):

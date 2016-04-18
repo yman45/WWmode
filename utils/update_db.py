@@ -181,13 +181,9 @@ class Device(Persistent):
         '''
         if not self.location:
             pass
-        if not self.location.startswith('!') and ',' in self.location:
-            delimeter = self.location.index(',')
-        else:
-            delimeter = 0
         try:
             self.location = convert(self.location, conv_from='lat',
-                                    end=delimeter, schema=schema)
+                                    schema=schema)
         except OSError:
             pass
 

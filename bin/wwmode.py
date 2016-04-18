@@ -112,6 +112,8 @@ def generate_cmd():
     '''
     if args.tacacs:
         maintools.generate_tacacs_list()
+    elif args.dns:
+        maintools.generate_dns_list()
 
 action_dict = {
     'update': update_cmd,
