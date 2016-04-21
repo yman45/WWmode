@@ -271,15 +271,31 @@ def generate_dns_list():
         if not dev.location:
             continue
         dev_loc = convert(dev.location, schema=run_set.location).lower()
-        dev_loc = dev_loc.replace("'", "").replace(".", "").split(",")[0]
-        print('#{}'.format(dev.location))
+        if ',' in dev_loc:
+            if re.search(r'\d{0,4}(-.{1,3} )?(\D )*?\d{1,3}',
+                         dev_loc.split(',')[0]):
+                dev_loc = dev_loc.split(',')[0]
+            else:
+                print('{}\t\t\tIN A\t\t\t{}'.format(dev_loc.split(',')[0],
+                                                    dev.ip))
+                continue
         print('{}\t\t\tIN A\t\t\t{}'.format(generate_dname(dev_loc, 'p', '1'),
                                             dev.ip))
 
 
 def generate_dname(address, role, number):
+    '''Generate domain name from postal address using custom Intertax rules
+    Args:
+        address - postal address
+        role - device role (one letter: p, n, s...
+        number - device ordinal number
+    Return:
+        generated domain name (without zone)
+    '''
     vowels = ('a', 'e', 'i', 'o', 'u', 'y')
-    address = address.lower().replace('`', '')
+    address = re.sub(r'[^a-zA-Z0-9 .,]', '', address).lower()
+    if ',' in address:
+        address = address.split(',')[0]
     location_pattern = re.compile(
         r'^(?P<fnum>\d{0,4})(?:-.{1,3} )?(?P<street>.+?) (?P<lnum>\d{1,3}.*)$')
     location_match = location_pattern.match(address)
@@ -295,7 +311,9 @@ def generate_dname(address, role, number):
         middle_part += middle_part_last_word
     tmp_word = ''
     for num, letter in enumerate(middle_part):
-        if num > 2 and letter not in vowels:
+        if num > 3 and letter not in vowels:
+            break
+        elif num > 3 and middle_part[num-1] not in vowels:
             break
         tmp_word += letter
     if middle_part[num-1] in vowels:
@@ -310,10 +328,7 @@ def generate_dname(address, role, number):
     for part in [location_match.group('fnum'), tmp_word, last_part]:
         if part:
             dname += part
-    if role == 'p' and number == '1':
-        return dname
-    else:
-        return role + number + '.' + dname
+    return role + number + '.' + dname
 
 
 def go_high(device):
