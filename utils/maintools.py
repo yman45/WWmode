@@ -345,3 +345,13 @@ def go_high(device):
     print(dev.location)
     for up in dev.uplinks:
         go_high(up[0].split('@')[-1])
+
+
+def dry_run():
+    '''Print out config
+    No args & return value
+    '''
+    for arg in dir(run_set):
+        if arg.startswith('__') and arg.endswith('__'):
+            continue
+        print('{}:\t{}'.format(arg, getattr(run_set, arg)))

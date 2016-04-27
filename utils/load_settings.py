@@ -38,17 +38,14 @@ class Settings:
         Overloaded
         '''
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
-        self.allowed_params = ('num_threads', 'subnet', 'unneded_vlans',
+        self.allowed_params = ('num_threads', 'unneded_vlans', 'wanted_attrs',
                                'uplink_pattern', 'ro_community', 'location',
                                'db_name', 'db_tree', 'supply_zone',
-                               'default_zone', 'default_role',
-                               'domain_prefix')
-        self.subnets = []
-        self.hosts = []
-        self.unneded_vlans = []
-        self.location = 'straight'
-        self.domain_prefix = ''
-        self.default_zone = ''
+                               'default_zone', 'default_role', 'domain_prefix')
+        self.general = SettingsGroup()
+        self.general.location = 'straight'
+        self.general.domain_prefix = ''
+        self.general.default_zone = ''
 
     def load_conf(self):
         '''Parse configuration file and fill instance with attributes
@@ -56,20 +53,36 @@ class Settings:
         '''
         try:
             with open(self.conf_location, 'r', encoding='utf-8') as conf_file:
+                group = self.general
                 for line in conf_file:
-                    cleaned_line = line.lower().strip().split(' = ')
-                    parameter, value = cleaned_line
+                    line = line.strip()
+                    if line.startswith('[') and line.endswith(']'):
+                        group_name = line.strip('[]')
+                        if not hasattr(self, group_name):
+                            setattr(self, group_name, SettingsGroup())
+                        group = getattr(self, group_name)
+                        continue
+                    elif not line:
+                        continue
+                    splitted_line = line.split(' = ')
+                    parameter, value = splitted_line
+                    parameter = parameter.lower()
                     if parameter.startswith('#'):
-                        pass
-                    elif parameter == 'subnet':
-                        self.subnets.append(ipaddress.ip_network(value))
-                    elif parameter == 'host':
-                        self.hosts.append(ipaddress.ip_address(value))
+                        continue
+                    elif parameter in ['subnet', 'host']:
+                        if group == self.general:
+                            m_logger.warning('Hosts addition in general group')
+                        else:
+                            getattr(group, parameter + 's').append(
+                                ipaddress.ip_network(value))
                     elif parameter == 'unneded_vlans':
-                        self.unneded_vlans.extend(
+                        getattr(group, parameter).extend(
                             [x.strip() for x in value.split(',')])
-                    elif parameter in self.allowed_params:
-                        self.__setattr__(parameter, value)
+                    elif parameter == 'wanted_attrs':
+                        getattr(group, parameter).append(value)
+                    elif parameter in (self.allowed_params +
+                                       group.allowed_params):
+                        setattr(group, parameter, value)
                     else:
                         m_logger.warning('Unidentified parameter: {}'.format(
                             parameter))
@@ -77,3 +90,12 @@ class Settings:
             er_msg = 'No config file found at {}'.format(self.conf_location)
             m_logger.error(er_msg)
             raise NoConfigFileError(er_msg)
+
+
+class SettingsGroup:
+    def __init__(self):
+        self.allowed_params = ('subnet', 'host')
+        self.unneded_vlans = []
+        self.subnets = []
+        self.hosts = []
+        self.wanted_attrs = []

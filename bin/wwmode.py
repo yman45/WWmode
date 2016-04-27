@@ -11,6 +11,8 @@ action.add_argument('-S', '--show', dest='action', action='store_const',
                     const='show', help='fetch info about devices & print it')
 action.add_argument('-G', '--generate', dest='action', action='store_const',
                     const='generate', help='generate usefull lists from DB')
+action.add_argument('-E', '--dry-run', dest='action', action='store_const',
+                    const='dry_run', help='parse config and print it')
 group_s = parser.add_argument_group('-S', 'show options')
 group_s.add_argument('-a', '--show-all', dest='show_all', action='store_true',
                      help='show all devices in compressed fashion')
@@ -115,9 +117,16 @@ def generate_cmd():
     elif args.dns:
         maintools.generate_dns_list()
 
+
+def dry_run_cmd():
+    '''Interlayer function for dry run
+    '''
+    maintools.dry_run()
+
 action_dict = {
     'update': update_cmd,
     'show': show_cmd,
-    'generate': generate_cmd
+    'generate': generate_cmd,
+    'dry_run': dry_run_cmd
 }
 action_dict[args.action]()
