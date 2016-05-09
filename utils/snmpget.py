@@ -1,8 +1,101 @@
 import logging
+import re
 from pysnmp.hlapi import *
 
 
 m_logger = logging.getLogger('wwmode_app.utils.snmpget')
+
+
+class SnmpGetter:
+    '''Class for retriving params from hosts
+    args:
+        engine - PySNMP engine
+        settings - load_settings.FakeSettings instance
+    methods:
+        overloaded __init__
+        sget_sys_description
+        sget_equal
+        sget_uplink_list
+        sget_vlan_list
+    '''
+    def __init__(self, engine, settings):
+        '''Initialize instance
+        args:
+            engine - PySNMP engine
+            settings - load_settings.FakeSettings instance
+        No return value
+        overloaded
+        '''
+        self.engine = engine
+        self.settings = settings
+
+    def sget_sys_description(self, ip):
+        '''Get host sysDescr value by SNMP get & produce instance snmp_get
+        attr. This method must run before any other sget_* method
+        args:
+            ip - IP address of host
+        return:
+            value - sysDescr value or None if request failed
+        '''
+        self.snmp_get = snmp_run(self.engine, self.settings.ro_community, ip,
+                                 'sysDescr', mib='SNMPv2-MIB')
+        error_indication, error_status, error_index, var_binds = next(
+            self.snmp_get)
+        oid, value = process_output(error_indication, error_status,
+                                    error_index, var_binds, ip)
+        return value
+
+    def sget_equal(self, device, param, oid):
+        '''Get parameter from host by running SNMP get request & set it to
+        device object
+        args:
+            device - Device object
+            param - requested parameter name
+            oid - SNMP OID
+        No return value
+        '''
+        oid, result = get_with_send(oid, device.ip, self.snmp_get)
+        setattr(device, param, result)
+
+    def sget_uplink_list(self, device, param, oid):
+        '''Get list of uplink descriptions and speed of appropriate interface
+        from host by running SNMP walk and get requests & set list to device
+        object
+        args:
+            device - Device object
+            param - requested parameter name
+            oid - SNMP OID
+        No return value
+        '''
+        all_uplinks = []
+        for oid, if_descr in tree_walk(self.engine, self.settings.ro_community,
+                                       device.ip, 'ifAlias', mib='IF-MIB'):
+            if if_descr and re.match(self.settings.uplink_pattern, if_descr):
+                if_index = oid.split('.')[-1]
+                oid, if_speed = get_with_send('ifHighSpeed', device.ip,
+                                              self.snmp_get, mib='IF-MIB',
+                                              index=if_index)
+                if_speed = if_speed + ' Mb/s'
+                all_uplinks.append((if_descr, if_speed))
+        setattr(device, param, all_uplinks)
+
+    def sget_vlan_list(self, device, param, oid):
+        '''Get list of VLANs from host by running SNMP walk request & set list
+        to device object
+        args:
+            device - Device object
+            param - requested parameter name
+            oid - SNMP OID
+        No return value
+        '''
+        all_vlans = []
+        for oid, vlan in tree_walk(self.engine, self.settings.ro_community,
+                                   device.ip, oid):
+            if device.vtree:
+                vlan = oid.split('.')[-1]
+            if vlan not in self.settings.unneded_vlans:
+                all_vlans.append(vlan)
+        setattr(device, param, all_vlans)
 
 
 def snmp_run(engine, community_name, address, oid, mib=None, action='get',

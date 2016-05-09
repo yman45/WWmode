@@ -6,13 +6,13 @@ import logging
 import re
 from queue import Queue
 from ZODB import FileStorage, DB
-from utils.load_settings import Settings
+from utils.load_settings import AppSettings, FakeSettings
 from utils.update_db import worker, Device
 from utils.dbutils import db_check, DBOpen, get_last_transaction_time
 from lexicon.translate import convert
 
 m_logger = logging.getLogger('wwmode_app.utils.utils')
-run_set = Settings()
+run_set = AppSettings()
 run_set.load_conf()
 
 
@@ -23,27 +23,29 @@ def update_db_run():
     No args & return value
     '''
     start_time = time.time()
-    q = Queue()
-    threads = []
     num_threads = int(run_set.num_threads)
-    total_hosts = [x for subnet in run_set.subnets for x in subnet.hosts()]
-    total_hosts.extend(run_set.hosts)
-    if num_threads > len(total_hosts):
-        num_threads = len(total_hosts)
     db_check(run_set.db_name, run_set.db_tree)
     storage = FileStorage.FileStorage(run_set.db_name)
-    db = DB(storage, pool_size=50)
-    for i in range(num_threads):
-        t = threading.Thread(target=worker, args=(q, run_set, db))
-        t.start()
-        threads.append(t)
-    for item in total_hosts:
-        q.put(item)
-    q.join()
-    for i in range(num_threads):
-        q.put(None)
-    for t in threads:
-        t.join()
+    db = DB(storage, pool_size=num_threads)
+    for group in run_set.groups.values():
+        q = Queue()
+        threads = []
+        total_hosts = [x for subnet in group.subnets for x in subnet.hosts()]
+        total_hosts.extend(group.hosts)
+        if num_threads > len(total_hosts):
+            num_threads = len(total_hosts)
+        settings = FakeSettings(run_set, group)
+        for i in range(num_threads):
+            t = threading.Thread(target=worker, args=(q, settings, db))
+            t.start()
+            threads.append(t)
+        for item in total_hosts:
+            q.put(item)
+        q.join()
+        for i in range(num_threads):
+            q.put(None)
+        for t in threads:
+            t.join()
     db.close()
     m_logger.debug('Total execution time: {:.2f} sec.'.format(
         time.time() - start_time))
@@ -59,6 +61,12 @@ def search_db(field, value):
     No return value
     '''
     def run_search(attr, val):
+        '''Supporting function for value searching in specific field
+        args:
+            attr - field to look in
+            val - value to find
+        No return value
+        '''
         with DBOpen(run_set.db_name) as connection:
             dbroot = connection.root()
             devdb = dbroot[run_set.db_tree]
@@ -100,6 +108,14 @@ def print_devices(device):
 
 
 def compute_time_diff(one, another):
+    '''Compute time differences between one time and another one. If another
+    one is a Device instance, then grub it last seen time.
+    args:
+        one - first time
+        another - second time OR Device instance
+    Return:
+        absolute difference in seconds
+    '''
     if isinstance(another, Device):
             another = datetime.datetime.strptime(
                 another.last_seen, '%d-%m-%Y %H:%M')
