@@ -8,8 +8,8 @@ As of now it support db update and some search operations.
 
 ### Update
 
-To update a db simply run it with *-U/--update* key. It take some time, log any
-intresting events and even check hosts for some errors.
+To update a db simply run it with *-U/--update* key. It take some time and log 
+some intresting events.
 
 ### Search
 
@@ -21,13 +21,13 @@ field:
     * IPv4 address - ip
     * Domain name - dname 
     * Contact - contact
-    * Locatoin - location
+    * Location - location
     * Device model - model
     * Firmware version - firmware
 
 You can search for VLAN chains straight with *-l/--find-vlan TAG* option.
 To show device chain from some device to top *-c/--chain DEVICE* option,
-where DEVICE are FQDN or IPv4.
+where DEVICE are FQDN or IPv4. *(that function is not customizable as of now)*
 To find switches with firmware older than given use 
 *-o/--older-software MODEL VERSION*.
 To find switches with firmware version older than newest one in DB use
@@ -47,6 +47,7 @@ For Nagios list use *-N/--nagios*.
 For DNS records - *-D/--dns*.
 For Trac records - *-K/--trac*.
 For RANCID db - *-R/--rancid*.
+*Some of that can work badly as of now*
 
 ### Verbose output
 For verbose output to console use *-v/--verbose* up to 2 times.

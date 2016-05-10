@@ -96,9 +96,9 @@ def show_cmd():
     elif args.uplink_chain:
         maintools.go_high(args.uplink_chain)
     elif args.find_vlan:
-        maintools.search_db('vlans', args.find_vlan)
+        maintools.search_db('c_vlans', args.find_vlan)
     elif args.model_search:
-        maintools.search_db('model', args.model_search)
+        maintools.search_db('c_model', args.model_search)
     elif args.full_search:
         maintools.search_db('full', args.full_search)
     elif args.older_software:

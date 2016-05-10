@@ -67,22 +67,18 @@ class Device(Persistent):
         '''
         aligner = ' ' * 5
         prstr = ('{0}IPv4 address: {1}\n{0}First seen: {2}\n' +
-                 '{0}Last seen: {3}\n{0}Device location: {4}\n' +
-                 '{0}Device contact: {5}\n').format(
-            aligner, self.ip, self.first_seen, self.last_seen, self.location,
-            self.contact)
+                 '{0}Last seen: {3}\n').format(aligner, self.ip,
+                                               self.first_seen, self.last_seen)
         try:
             dnamestr = "{}Domain name: {}\n".format(aligner, self.dname)
         except AttributeError:
             dnamestr = ""
-        try:
-            addstr = ('{0}Device model: {1}\n{0}Firmware version: {2}\n' +
-                      '{0}VLAN list: {3}\n{0}Uplinks: {4}').format(
-                          aligner, self.model, self.firmware, self.vlans,
-                          self.uplinks)
-        except AttributeError:
-            addstr = ""
-        return prstr + dnamestr + addstr
+        addstr = ''
+        for attr in dir(self):
+            if attr.startswith('c_'):
+                addstr += '{}{}: {}\n'.format(aligner, attr[2:].capitalize(),
+                                              getattr(self, attr))
+        return prstr + dnamestr + addstr[:-1]  # remove last linefeed
 
     def _p_resolveConflict(self, old_state, saved_state, new_state):
         '''Method for DB conflicts to be resolved. As we do not trying to
@@ -149,11 +145,11 @@ class Device(Persistent):
             schema - file name where transliteration schema kept
         No return value
         '''
-        if not self.location:
+        if not self.c_location:
             pass
         try:
-            self.location = convert(self.location, conv_from='lat',
-                                    schema=schema)
+            self.c_location = convert(self.c_location, conv_from='lat',
+                                      schema=schema)
         except OSError:
             pass
 
@@ -229,8 +225,8 @@ def worker(queue, settings, db):
                     oid = dev_card[param + '_oid']
                 getattr(snmp_getter, 'sget_' + wanted_params[param])(
                     device, param, oid)
-            m_logger.info('{} ----> {}'.format(host, device.model))
+            m_logger.info('{} ----> {}'.format(host, device.c_model))
         else:
-            device.model = 'unrecognized'
+            device.c_model = 'unrecognized'
             m_logger.info('{} unrecognized...'.format(host))
         queue.task_done()

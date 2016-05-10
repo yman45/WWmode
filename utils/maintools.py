@@ -75,15 +75,17 @@ def search_db(field, value):
                     dev_val = getattr(devdb[dev], attr)
                 except AttributeError:
                     continue
-                if val in dev_val and attr is not 'vlans':
+                if val in dev_val and attr is not 'c_vlans':
                     print("{} - {} - {} >>> {}".format(
-                        devdb[dev].ip, devdb[dev].dname, devdb[dev].location,
+                        devdb[dev].ip, devdb[dev].dname, devdb[dev].c_location,
                         dev_val))
                 elif val in dev_val:
                     print("{} - {} - {}".format(
-                        devdb[dev].ip, devdb[dev].dname, devdb[dev].location))
+                        devdb[dev].ip, devdb[dev].dname,
+                        devdb[dev].c_location))
     if field == 'full':
-        for a in ['ip', 'dname', 'contact', 'location', 'model', 'firmware']:
+        for a in ['ip', 'dname', 'c_contact', 'c_location', 'c_model',
+                  'c_firmware']:
             run_search(a, value)
     else:
         run_search(field, value)
@@ -97,14 +99,10 @@ def print_devices(device):
     '''
     try:
         print("{} - {} - {} - {}".format(
-            device.ip, device.dname, device.location,
-            device.model))
+            device.ip, device.dname, device.c_location, device.c_model))
     except AttributeError:
-        try:
-            print("{} - {} - {}".format(
-                device.ip, device.dname, device.location))
-        except AttributeError:
-            print("{} - {}".format(device.ip, device.location))
+        print("{} - {} - {}".format(
+              device.ip, device.c_location, device.c_model))
 
 
 def compute_time_diff(one, another):
@@ -180,7 +178,7 @@ def show_single_device(device, quiet=False):
                     mod = device + '.' + run_set.default_zone
                 elif run_set.default_zone and len(device.split('.')) == len(
                         run_set.default_zone.split('.')) + 1:
-                    mod = run_set.domain_prefix + device
+                    mod = run_set.domain_prefix + '.' + device
                 q_list = list(
                     [devdb[x] for x in devdb if devdb[x].dname == device])
                 m_list = list(
@@ -235,11 +233,11 @@ def software_search(model, version, older=True):
             return False
     for dev in device_generator():
         try:
-            dev.model
+            dev.c_model
         except AttributeError:
             continue
-        if model.upper() in dev.model and check_soft(
-                version, dev.firmware):
+        if model.upper() in dev.c_model and check_soft(
+                version, dev.c_firmware):
             print_devices(dev)
 
 
@@ -252,12 +250,12 @@ def find_newest_firmware():
     d = {}
     for dev in device_generator():
         try:
-            dev.model
+            dev.c_firmware
         except AttributeError:
             continue
-        if dev.model not in d or (
-                dev.firmware > d[dev.model]):
-            d[dev.model] = dev.firmware
+        if dev.c_model not in d or (
+                dev.c_firmware > d[dev.c_model]):
+            d[dev.c_model] = dev.c_firmware
     for k, v in d.items():
         print('{}: {}'.format(k, v))
     print('-' * 30)
@@ -284,9 +282,10 @@ def generate_dns_list():
     No args & return values
     '''
     for dev in device_generator():
-        if not dev.location:
+        if not dev.c_location:
             continue
-        dev_loc = convert(dev.location, schema=run_set.location).lower()
+        dev_loc = convert(dev.c_location,
+                          schema=run_set.location_transliteration).lower()
         if ',' in dev_loc:
             if re.search(r'\d{0,4}(-.{1,3} )?(\D )*?\d{1,3}',
                          dev_loc.split(',')[0]):
@@ -358,9 +357,9 @@ def go_high(device):
     if not dev:
         print('-'*10)
         return
-    print(dev.location)
-    for up in dev.uplinks:
-        go_high(up[0].split('@')[-1])
+    print(dev.c_location)
+    for up in dev.c_uplinks:
+        go_high(up[0].split('@')[-1].split(' ')[0])
 
 
 def dry_run():

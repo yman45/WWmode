@@ -55,7 +55,7 @@ class SnmpGetter:
         No return value
         '''
         oid, result = get_with_send(oid, device.ip, self.snmp_get)
-        setattr(device, param, result)
+        setattr(device, 'c_' + param, result)
 
     def sget_uplink_list(self, device, param, oid):
         '''Get list of uplink descriptions and speed of appropriate interface
@@ -77,7 +77,7 @@ class SnmpGetter:
                                               index=if_index)
                 if_speed = if_speed + ' Mb/s'
                 all_uplinks.append((if_descr, if_speed))
-        setattr(device, param, all_uplinks)
+        setattr(device, 'c_' + param, all_uplinks)
 
     def sget_vlan_list(self, device, param, oid):
         '''Get list of VLANs from host by running SNMP walk request & set list
@@ -95,7 +95,7 @@ class SnmpGetter:
                 vlan = oid.split('.')[-1]
             if vlan not in self.settings.unneded_vlans:
                 all_vlans.append(vlan)
-        setattr(device, param, all_vlans)
+        setattr(device, 'c_' + param, all_vlans)
 
 
 def snmp_run(engine, community_name, address, oid, mib=None, action='get',

@@ -1,0 +1,33 @@
+#num of threads that making SNMP queries in parallel
+num_threads = 50
+# database file name
+db_name = hostsdb.fs
+# database tree name (choose any)
+db_tree = hosts
+# list of VLANs that you don't want to see in device cards
+unneded_vlans = 0,1,1002,1003,1004,1005
+# pattern for uplink interface recognition from description
+uplink_pattern = ^\S+@(\S+) up( \D{3})?$
+# SNMP community for reading
+ro_community = public
+# if you don't need sysLocation transliteration leave 'straight'
+location_transliteration = straight
+# default domain zone for your devices
+default_zone = local
+# domain zone for supply devices (delete it if none)
+supply_zone = supply.local
+# domain prefix, like 'node.'bigswitch.local (make empty if none)
+domain_prefix = r1
+
+# group of devices definition
+# you can rewrite most of general options inside group (not db_name, db_tree & num_threads)
+# Wanted lists doesn't clash but concatenating instead
+[switches]
+# IPv4 subnet for that group, can be many of them
+subnet = 10.0.100.0/24
+# IPv4 host for that group, can be many of them
+host = 192.168.45.13
+# list of parameters that you want to retrive
+# every parameter start with spaces (use equal number of spaces)
+Wanted:
+    vlans = vlan_list
