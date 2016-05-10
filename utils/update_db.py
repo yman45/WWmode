@@ -180,6 +180,7 @@ def worker(queue, settings, db):
     dbroot = connection.root()
     devdb = dbroot['devicedb']
     while True:
+        dev_card = None
         host = queue.get()
         if host is None:
             transaction.commit()
@@ -230,5 +231,6 @@ def worker(queue, settings, db):
                     device, param, oid)
             m_logger.info('{} ----> {}'.format(host, device.model))
         else:
+            device.model = 'unrecognized'
             m_logger.info('{} unrecognized...'.format(host))
         queue.task_done()

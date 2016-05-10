@@ -182,8 +182,11 @@ class AppSettings(CommonSettings):
                     m_logger.warning(
                         'Hosts addition without group declaration')
                 else:
-                    getattr(group, parameter + 's').append(
-                        ipaddress.ip_network(value))
+                    if parameter == 'subnet':
+                        func = ipaddress.ip_network
+                    else:
+                        func = ipaddress.ip_address
+                    getattr(group, parameter + 's').append(func(value))
             elif parameter == 'unneded_vlans':
                 getattr(group, parameter).extend(
                     [x.strip() for x in value.split(',')])
