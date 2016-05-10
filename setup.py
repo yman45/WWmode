@@ -4,15 +4,15 @@ except ImportError:
     from distutils.core import setup
 
 config = {
-        'description': 'Collector of network devices states'
+        'description': 'Network devices scanner'
         'author': 'Yakov Shiryaev'
-        'url': 'URL to get it at.',
-        'download_url': 'Where to download it.',
+        'url': 'https://github.com/yman45/wwmode',
+        'download_url': 'https://github.com/yman45/wwmode.git',
         'author_email': 'yman@protonmail.ch'
         'version': '0.1',
         'install_requires': [],
-        'packages': ['utils'],
-        'scripts': [],
+        'packages': ['utils', 'lexicon'],
+        'scripts': ['wwmode.bin'],
         'name': 'WWmode'
         }
 setup(**config)
