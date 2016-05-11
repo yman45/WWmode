@@ -7,7 +7,9 @@ db_tree = hosts
 # list of VLANs that you don't want to see in device cards
 unneded_vlans = 0,1,1002,1003,1004,1005
 # pattern for uplink interface recognition from description
-uplink_pattern = ^\S+@(\S+) up( \D{3})?$
+# for uplink trees recognition include 'device' group into pattern, if you uplink is 
+# complex, i.e. something like 'port@uplink_dns up'
+uplink_pattern = ^\S+@(?P<device>\S+) up( \D{3})?$
 # SNMP community for reading
 ro_community = public
 # if you don't need sysLocation transliteration leave 'straight'

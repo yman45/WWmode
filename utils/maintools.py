@@ -353,13 +353,23 @@ def go_high(device):
         device - IP address or domain name of device (FQDN or main part)
     No return value
     '''
+    if not hasattr(run_set, 'uplink_pattern'):
+        print('no uplink pattern defined')
+        return
+    pattern = re.compile(run_set.uplink_pattern)
     dev = show_single_device(device, quiet=True)
     if not dev:
         print('-'*10)
         return
     print(dev.c_location)
     for up in dev.c_uplinks:
-        go_high(up[0].split('@')[-1].split(' ')[0])
+        m_res = pattern.match(up[0])
+        if m_res:
+            try:
+                up_dev = m_res.group('device')
+            except IndexError:
+                up_dev = up[0]
+        go_high(up_dev)
 
 
 def dry_run():
