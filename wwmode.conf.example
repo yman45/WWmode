@@ -20,6 +20,11 @@ default_zone = local
 supply_zone = supply.local
 # domain prefix, like 'node.'bigswitch.local (make empty if none)
 domain_prefix = r1
+# bind list for static binding address to device card
+# for example Junipers override SNMP sysDescr field with 'set snmp description option',
+# so if you don't want (or can't) get rid of that setting use static list in form of
+# IPADDRESS = VENDOR SERIES; give full path to file here
+bind_file = /home/user/wwmode/app/bind.txt
 
 # group of devices definition
 # you can rewrite most of general options inside group (not db_name, db_tree & num_threads)

@@ -23,44 +23,6 @@ class DuplicateGroupNames(SettingsLoaderException):
     pass
 
 
-class CommonSettings:
-    '''Objects with sane default settings for scan start. Used only for
-    inheritance.
-    No methods
-    attributes:
-        num_threads (default - 1) - parallel working threads, which taking part
-            in scanning
-        unneded_vlans (default - []) - list of VLANs that would be omitted from
-            DB
-        uplink_pattern (default - 'up .+') - string pattern for uplink
-            interface description searching
-        ro_community (default - 'public') - SNMP community for reading
-        location_transliteration (default - 'straight') - transliterate or not
-            locations to russian (and which schema to use)
-        db_name (default - hosts_db) - database filename
-        db_tree (default - hosts) - name of a tree in DB
-        supply_zone (default - None) - domain zone to check for supply devices
-        default_zone (default - 'local') - domain zone of hosts
-        domain_prefix (default - '') - prefix for shortening hosts domain names
-        wanted_params (see default in code or in manual) - dictionary with
-            parameters to retrive from hosts
-    '''
-    num_threads = 1
-    unneded_vlans = []
-    uplink_pattern = 'up .+'
-    ro_community = 'public'
-    location_transliteration = 'straight'
-    db_name = 'hosts_db'
-    db_tree = 'hosts'
-    supply_zone = None
-    default_zone = 'local'
-    domain_prefix = ''
-    wanted_params = {'model': 'equal',
-                     'firmware': 'equal',
-                     'uplinks': 'uplink_list'
-                     }
-
-
 class GroupSettings:
     '''Objects for storing group settings.
     methods:
@@ -91,10 +53,28 @@ class GroupSettings:
         self.group_wanted = {}
 
 
-class AppSettings(CommonSettings):
+class AppSettings:
     '''Application settings representation class
     instance attrs:
         conf_location - path to configuration file
+        num_threads (default - 1) - parallel working threads, which taking part
+            in scanning
+        unneded_vlans (default - []) - list of VLANs that would be omitted from
+            DB
+        uplink_pattern (default - 'up .+') - string pattern for uplink
+            interface description searching
+        ro_community (default - 'public') - SNMP community for reading
+        location_transliteration (default - 'straight') - transliterate or not
+            locations to russian (and which schema to use)
+        db_name (default - hosts_db) - database filename
+        db_tree (default - hosts) - name of a tree in DB
+        supply_zone (default - None) - domain zone to check for supply devices
+        default_zone (default - 'local') - domain zone of hosts
+        domain_prefix (default - '') - prefix for shortening hosts domain names
+        bind_dict (default - {}) - dictionary to fill with static binds ip-card
+        bind_file (default - '') - file that contains static device binds
+        wanted_params (see default in code or in manual) - dictionary with
+            parameters to retrive from hosts
         groups (default - {}) - disctionary for host groups
     methods:
         overloaded __init__
@@ -106,6 +86,22 @@ class AppSettings(CommonSettings):
         Overloaded
         '''
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
+        self.num_threads = 1
+        self.unneded_vlans = []
+        self.uplink_pattern = 'up .+'
+        self.ro_community = 'public'
+        self.location_transliteration = 'straight'
+        self.db_name = 'hosts_db'
+        self.db_tree = 'hosts'
+        self.supply_zone = None
+        self.default_zone = 'local'
+        self.domain_prefix = ''
+        self.bind_dict = {}
+        self.bind_file = ''
+        self.wanted_params = {'model': 'equal',
+                              'firmware': 'equal',
+                              'uplinks': 'uplink_list'
+                              }
         self.groups = {}
 
     def load_conf(self):
@@ -140,6 +136,15 @@ class AppSettings(CommonSettings):
             er_msg = 'No config file found at {}'.format(self.conf_location)
             m_logger.error(er_msg)
             raise NoConfigFileError(er_msg)
+        if self.bind_file:
+            try:
+                with open(self.bind_file, 'r', encoding='utf-8') as bind_file:
+                    for line in bind_file:
+                        address, card = [n.strip() for n in line.split('=')]
+                        self.bind_dict[address] = card
+            except FileNotFoundError:
+                m_logger.error('Bind file not found at {}'.format(
+                    self.bind_file))
 
     def parse_param(self, line, group, in_wanted):
         '''Parse parameters from lines
@@ -201,8 +206,7 @@ class AppSettings(CommonSettings):
                 m_logger.warning('Unidentified parameter: {}'.format(
                     parameter))
 
-        splitted_line = line.split(' = ')
-        parameter, value = splitted_line
+        parameter, value = [n.strip() for n in line.split('=')]
         parameter = parameter.lower()
         if in_wanted:
             parse_wanted(group, parameter, value)

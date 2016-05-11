@@ -208,7 +208,12 @@ def worker(queue, settings, db):
                 m_logger.error('{}: DNS: no domain name in {} zone'.format(
                     device.ip, settings.supply_zone))
         for card in device_cards:
-            if re.search(card['info_pattern'], sys_descr):
+            if device.ip in settings.bind_dict.keys():
+                if settings.bind_dict[device.ip] == card[
+                        'vendor'] + ' ' + card['series']:
+                    dev_card = card
+                    break
+            elif re.search(card['info_pattern'], sys_descr):
                 dev_card = card
                 break
         if dev_card:
