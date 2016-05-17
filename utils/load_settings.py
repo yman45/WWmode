@@ -193,7 +193,10 @@ class AppSettings:
                         func = ipaddress.ip_network
                     else:
                         func = ipaddress.ip_address
-                    getattr(group, parameter + 's').append(func(value))
+                    try:
+                        getattr(group, parameter + 's').append(func(value))
+                    except ValueError:
+                        m_logger.error('Incorrect address {}'.format(value))
             elif parameter == 'unneded_vlans':
                 getattr(group, parameter).extend(
                     [x.strip() for x in value.split(',')])
@@ -209,6 +212,9 @@ class AppSettings:
                     parameter))
 
         parameter, value = [n.strip() for n in line.split('=')]
+        if not value:
+            m_logger.warning('No value for parameter {}'.format(parameter))
+            return False
         parameter = parameter.lower()
         if in_wanted:
             parse_wanted(group, parameter, value)

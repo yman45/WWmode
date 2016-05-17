@@ -27,7 +27,11 @@ def update_db_run():
     No args & return value
     '''
     start_time = time.time()
-    num_threads = int(run_set.num_threads)
+    try:
+        num_threads = int(run_set.num_threads)
+    except ValueError:
+        m_logger.error('Incorrect number of threads - {}'.format(num_threads))
+        num_threads = 10
     db_check(run_set.db_name, run_set.db_tree)
     storage = FileStorage.FileStorage(run_set.db_name)
     db = DB(storage, pool_size=num_threads)
