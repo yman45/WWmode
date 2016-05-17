@@ -4,6 +4,8 @@ import threading
 import ipaddress
 import logging
 import re
+import os
+import os.path
 from queue import Queue
 from ZODB import FileStorage, DB
 from utils.load_settings import AppSettings, FakeSettings
@@ -14,6 +16,8 @@ from lexicon.translate import convert
 m_logger = logging.getLogger('wwmode_app.utils.utils')
 run_set = AppSettings()
 run_set.load_conf()
+if not os.path.isdir(run_set.logs_path):
+    os.mkdir(run_set.logs_path)
 
 
 def update_db_run():

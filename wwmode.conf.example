@@ -1,5 +1,7 @@
 #num of threads that making SNMP queries in parallel
 num_threads = 50
+# path to directory for logs storing (cwd + 'logs' if omit)
+logs_path = /home/user/.wwmode_logs
 # database file name
 db_name = hostsdb.fs
 # database tree name (choose any)

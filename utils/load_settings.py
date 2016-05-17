@@ -57,6 +57,7 @@ class AppSettings:
     '''Application settings representation class
     instance attrs:
         conf_location - path to configuration file
+        logs_path - directory to store logs
         num_threads (default - 1) - parallel working threads, which taking part
             in scanning
         unneded_vlans (default - []) - list of VLANs that would be omitted from
@@ -86,6 +87,7 @@ class AppSettings:
         Overloaded
         '''
         self.conf_location = os.path.join(os.getcwd(), 'wwmode.conf')
+        self.logs_path = os.path.join(os.getcwd(), 'logs')
         self.num_threads = 1
         self.unneded_vlans = []
         self.uplink_pattern = 'up .+'
