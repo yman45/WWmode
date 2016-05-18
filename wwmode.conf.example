@@ -22,11 +22,19 @@ default_zone = local
 supply_zone = supply.local
 # domain prefix, like 'node.'bigswitch.local (make empty if none)
 domain_prefix = r1
-# bind list for static binding address to device card
+# bind list for static binding address to device card goes after 'Bindings:'
 # for example Junipers override SNMP sysDescr field with 'set snmp description option',
 # so if you don't want (or can't) get rid of that setting use static list in form of
 # IPADDRESS = VENDOR SERIES; give full path to file here
-bind_file = /home/user/wwmode/app/bind.txt
+Bindings:
+    192.168.43.15 = Juniper EX
+# TACACS pairs list for splitting host in different access groups for using with before.sh
+# TACACS script. Pairs have a form of 'c = core', where 'c' is first symbol in host domain name
+# (c1.switch.local), and 'core' is access level for that host. Pairs goes after 'Tacacs pairs:'
+Tacacs pairs:
+    c = core
+    d = distribution
+    a = access
 
 # group of devices definition
 # you can rewrite most of general options inside group (not db_name, db_tree & num_threads)

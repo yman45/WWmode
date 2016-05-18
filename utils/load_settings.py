@@ -73,7 +73,9 @@ class AppSettings:
         default_zone (default - 'local') - domain zone of hosts
         domain_prefix (default - '') - prefix for shortening hosts domain names
         bind_dict (default - {}) - dictionary to fill with static binds ip-card
-        bind_file (default - '') - file that contains static device binds
+        tacacs_pairs (defalut - {}) - dictionary to fill with TACACS host types
+        special_settings_list - list with words indicating special zones in
+            config file
         wanted_params (see default in code or in manual) - dictionary with
             parameters to retrive from hosts
         groups (default - {}) - disctionary for host groups
@@ -99,7 +101,8 @@ class AppSettings:
         self.default_zone = 'local'
         self.domain_prefix = ''
         self.bind_dict = {}
-        self.bind_file = ''
+        self.tacacs_pairs = {}
+        self.special_settings_list = ['Wanted:', 'Bindings:', 'Tacacs pairs:']
         self.wanted_params = {'model': 'equal',
                               'firmware': 'equal',
                               'uplinks': 'uplink_list'
@@ -111,7 +114,8 @@ class AppSettings:
         No args & return value
         '''
         group = self
-        in_wanted = False
+        in_special = False
+        special_dict = None
         try:
             with open(self.conf_location, 'r', encoding='utf-8') as conf_file:
                 for line in conf_file:
@@ -128,53 +132,58 @@ class AppSettings:
                             raise DuplicateGroupNames(er_msg)
                     elif not line or line.startswith('#'):
                         pass
-                    elif line.rstrip() == 'Wanted:':
-                        in_wanted = True
+                    elif line.rstrip() in self.special_settings_list:
+                        in_special = True
+                        special_dict = line.rstrip()
                     else:
-                        if in_wanted and not line.startswith((' ', '\t')):
-                            in_wanted = False
-                        self.parse_param(line.strip(), group, in_wanted)
+                        if in_special and not line.startswith((' ', '\t')):
+                            in_special = False
+                            special_dict = None
+                        self.parse_param(line.strip(), group, in_special,
+                                         special_dict)
         except FileNotFoundError:
             er_msg = 'No config file found at {}'.format(self.conf_location)
             m_logger.error(er_msg)
             raise NoConfigFileError(er_msg)
-        if self.bind_file:
-            try:
-                with open(self.bind_file, 'r', encoding='utf-8') as bind_file:
-                    for line in bind_file:
-                        address, card = [n.strip() for n in line.split('=')]
-                        self.bind_dict[address] = card
-            except FileNotFoundError:
-                m_logger.error('Bind file not found at {}'.format(
-                    self.bind_file))
 
-    def parse_param(self, line, group, in_wanted):
+    def parse_param(self, line, group, in_special=False, special_dict=None):
         '''Parse parameters from lines
         arguments:
             line - line of configuration stripped of whitespaces
             group - current configurating group
-            in_wanted - is that parameter for retriving from hosts
+            in_special - drop that parameter in special dictionary (default -
+                False)
+            special_dict - what special dictionary to fill (default - None)
         No return value
         '''
-        def parse_wanted(group, parameter, value):
+        def parse_special(group, parameter, value, special):
             '''Supporting function for parsing parameters for retriving from
             hosts
             arguments:
                 group - current configurating group
                 parameter - parameter name
                 value - parameter value
+                special - what special dictionary to fill
             No return value
             '''
-            if group == self:
-                wanted_dict = self.wanted_params
+            if special == 'Wanted:':
+                if group == self:
+                    wanted_dict = self.wanted_params
+                else:
+                    wanted_dict = group.group_wanted
+                if parameter in ['contact', 'location', 'model', 'firmware',
+                                 'uplinks']:
+                    m_logger.warning(
+                        "Default parameter '{}' reassignment".format(
+                            parameter))
+                else:
+                    wanted_dict[parameter] = value
             else:
-                wanted_dict = group.group_wanted
-            if parameter in ['contact', 'location', 'model', 'firmware',
-                             'uplinks']:
-                m_logger.warning("Default parameter '{}' reassignment".format(
-                    parameter))
-            else:
-                wanted_dict[parameter] = value
+                if special == 'Bindings:':
+                    s_dict = self.bind_dict
+                elif special == 'Tacacs pairs:':
+                    s_dict = self.tacacs_pairs
+                s_dict[parameter] = value
 
         def parse_normal(group, parameter, value):
             '''Supporting function for parsing common parameters
@@ -211,13 +220,16 @@ class AppSettings:
                 m_logger.warning('Unidentified parameter: {}'.format(
                     parameter))
 
+        if '=' not in line:
+            m_logger.warning("String '{}' not identified".format(line))
+            return False
         parameter, value = [n.strip() for n in line.split('=')]
         if not value:
             m_logger.warning('No value for parameter {}'.format(parameter))
             return False
         parameter = parameter.lower()
-        if in_wanted:
-            parse_wanted(group, parameter, value)
+        if in_special:
+            parse_special(group, parameter, value, special_dict)
         else:
             parse_normal(group, parameter, value)
 

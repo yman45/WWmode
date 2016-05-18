@@ -276,11 +276,16 @@ def generate_tacacs_list():
     No args & return values
     '''
     for dev in device_generator():
-        if dev.dname.startswith(('n', 's', 'vc')):
-            node_type = 'nodes'
-        else:
-            node_type = 'sites'
-        print('{} {} {}'.format(node_type, dev.ip, dev.dname))
+        node_type = None
+        if dev.dname.startswith(tuple(run_set.tacacs_pairs.keys())):
+            for key in run_set.tacacs_pairs.keys():
+                if dev.dname.startswith(key):
+                    node_type = run_set.tacacs_pairs[key]
+                    break
+        elif dev.dname:
+            node_type = 'access'
+        if node_type:
+            print('{} {} {}'.format(node_type, dev.ip, dev.dname))
 
 
 def generate_dns_list():
