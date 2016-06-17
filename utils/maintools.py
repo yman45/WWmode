@@ -317,8 +317,8 @@ def generate_nagios_list():
             template += '\talias\t\tDEVICE at {}\n'.format(dev.c_location)
         template += '\taddress\t\t{}\n'.format(dev.ip)
         if hasattr(dev, 'c_uplinks'):
+            template += '\tparents\t\t'
             for node in dev.c_uplinks:
-                template += '\tparents\t\t'
                 if node:
                     template += node[0] + ','
             template = template[:-1]
