@@ -327,6 +327,17 @@ def generate_nagios_list():
         print(template)
 
 
+def generate_rancid_list():
+    '''Generate Rancid router.db list
+    No args & return value
+    '''
+    for dev in device_generator():
+        if not dev.dname:
+            continue
+        if hasattr(dev, 'rancid_type'):
+            print('{};{};up'.format(dev.dname, dev.rancid_type))
+
+
 def generate_dname(address, role, number):
     '''Generate domain name from postal address using custom Intertax rules
     Args:

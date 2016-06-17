@@ -216,7 +216,9 @@ def worker(queue, settings, db):
                 dev_card = card
                 break
         if dev_card:
-            device.vtree = True if 'vlan_tree_by_oid' in card else False
+            device.vtree = True if 'vlan_tree_by_oid' in dev_card else False
+            device.rancid_type = dev_card[
+                'rancid_type'] if 'rancid_type' in dev_card else 'cisco'
             wanted_params = settings.group_wanted
             wanted_params.update(settings.wanted_params)
             for param in wanted_params.keys():

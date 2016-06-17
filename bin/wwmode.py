@@ -118,6 +118,8 @@ def generate_cmd():
         maintools.generate_dns_list()
     elif args.nagios:
         maintools.generate_nagios_list()
+    elif args.rancid:
+        maintools.generate_rancid_list()
 
 
 def dry_run_cmd():
