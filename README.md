@@ -45,9 +45,8 @@ Generate usefull info from DB records.
 To generate plain list of hosts use *-P/--plain* key.
 For Nagios list use *-N/--nagios*.
 For DNS records - *-D/--dns*.
-For Trac records - *-K/--trac*.
+For Trac table - *-T/--trac*.
 For RANCID db - *-R/--rancid*.
-*Some of that not work at all as of now*
 
 ### Verbose output
 For verbose output to console use *-v/--verbose* up to 2 times.

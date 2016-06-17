@@ -338,6 +338,27 @@ def generate_rancid_list():
             print('{};{};up'.format(dev.dname, dev.rancid_type))
 
 
+def generate_trac_table():
+    '''Generate markdown table for Trac knowledge base
+    No args & return value
+    '''
+    header = '|| Location || Device model || Domain name || IP address ||'
+    header += ' Link speed ||'
+    print(header)
+    for dev in device_generator():
+        template = '|| '
+        t_location = getattr(dev, 'c_location', '  ')
+        t_model = getattr(dev, 'c_model', '  ')
+        t_dname = getattr(dev, 'dname', '  ')
+        template += t_location + ' || ' + t_model + ' || ' + t_dname + ' || '
+        template += dev.ip + ' || '
+        if hasattr(dev, 'c_uplinks') and dev.c_uplinks:
+            template += dev.c_uplinks[0][1] + ' ||'
+        else:
+            template += '  ||'
+        print(template)
+
+
 def generate_dname(address, role, number):
     '''Generate domain name from postal address using custom Intertax rules
     Args:

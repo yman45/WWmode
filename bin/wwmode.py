@@ -42,7 +42,7 @@ group_g.add_argument('-N', '--nagios', dest='nagios', action='store_true',
                      help='generate list of hosts for Nagios')
 group_g.add_argument('-D', '--dns', dest='dns', action='store_true',
                      help='generate list of hosts for DNS')
-group_g.add_argument('-K', '--kbase', dest='kbase', action='store_true',
+group_g.add_argument('-T', '--trac', dest='trac', action='store_true',
                      help='generate list of hosts for Trac knowledge base')
 group_g.add_argument('-R', '--rancid', dest='rancid', action='store_true',
                      help='generate list of hosts for RANCID')
@@ -120,6 +120,8 @@ def generate_cmd():
         maintools.generate_nagios_list()
     elif args.rancid:
         maintools.generate_rancid_list()
+    elif args.trac:
+        maintools.generate_trac_table()
 
 
 def dry_run_cmd():
