@@ -46,8 +46,7 @@ class Device(Persistent):
     founded_hosts = 0
 
     def __init__(self, ip):
-        '''Initialize vlans and uplinks lists and add 1 to class
-        num_instances counters
+        '''Initialize instance, add 1 to class num_instances counters
         Args:
             ip - string representation of device IPv4 address
         Overloaded

@@ -27,7 +27,7 @@ field:
 
 You can search for VLAN chains straight with *-l/--find-vlan TAG* option.
 To show device chain from some device to top *-c/--chain DEVICE* option,
-where DEVICE are FQDN or IPv4. *(that function is not customizable as of now)*
+where DEVICE are FQDN or IPv4.
 To find switches with firmware older than given use 
 *-o/--older-software MODEL VERSION*.
 To find switches with firmware version older than newest one in DB use
@@ -42,12 +42,12 @@ switches considered inactive (not contacted last time) use *-i/--inactive* key.
 
 *-G group*
 Generate usefull info from DB records. 
-To generate a TACACS+ allowed\_hosts list for before.sh script use *-T/--tacacs* key.
+To generate plain list of hosts use *-P/--plain* key.
 For Nagios list use *-N/--nagios*.
 For DNS records - *-D/--dns*.
 For Trac records - *-K/--trac*.
 For RANCID db - *-R/--rancid*.
-*Some of that can work badly as of now*
+*Some of that not work at all as of now*
 
 ### Verbose output
 For verbose output to console use *-v/--verbose* up to 2 times.

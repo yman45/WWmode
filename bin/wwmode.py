@@ -36,8 +36,8 @@ group_s.add_argument('-t', '--older-than', dest='older_software',
 group_s.add_argument('-o', '--outdated', dest='outdated', action='store_true',
                      help='show devices with outdated software')
 group_g = parser.add_argument_group('-G', 'generate option')
-group_g.add_argument('-T', '--tacacs', dest='tacacs', action='store_true',
-                     help='generate list of hosts for TACACS+')
+group_g.add_argument('-P', '--plain', dest='plain', action='store_true',
+                     help='generate plain list of hosts')
 group_g.add_argument('-N', '--nagios', dest='nagios', action='store_true',
                      help='generate list of hosts for Nagios')
 group_g.add_argument('-D', '--dns', dest='dns', action='store_true',
@@ -112,10 +112,12 @@ def generate_cmd():
     '''Interlayer function for different generate command execution
     based on provided CLI args
     '''
-    if args.tacacs:
-        maintools.generate_tacacs_list()
+    if args.plain:
+        maintools.generate_plain_list()
     elif args.dns:
         maintools.generate_dns_list()
+    elif args.nagios:
+        maintools.generate_nagios_list()
 
 
 def dry_run_cmd():

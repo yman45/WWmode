@@ -271,21 +271,13 @@ def find_newest_firmware():
         yield model, d[model]
 
 
-def generate_tacacs_list():
-    '''Generate list of allowed hosts for TACACS+ before.sh script
+def generate_plain_list():
+    '''Generate list of hosts domain names one on a line
     No args & return values
     '''
     for dev in device_generator():
-        node_type = None
-        if dev.dname.startswith(tuple(run_set.tacacs_pairs.keys())):
-            for key in run_set.tacacs_pairs.keys():
-                if dev.dname.startswith(key):
-                    node_type = run_set.tacacs_pairs[key]
-                    break
-        elif dev.dname:
-            node_type = 'access'
-        if node_type:
-            print('{} {} {}'.format(node_type, dev.ip, dev.dname))
+        if dev.dname:
+            print('{}'.format(dev.dname))
 
 
 def generate_dns_list():
@@ -309,6 +301,30 @@ def generate_dns_list():
                 continue
         print('{}\t\t\tIN A\t\t\t{}'.format(generate_dname(dev_loc, 'p', '1'),
                                             dev.ip))
+
+
+def generate_nagios_list():
+    '''Generate Nagios host definitions
+    No args & return values
+    '''
+    for dev in device_generator():
+        if not dev.dname:
+            continue
+        template = 'define host{\n'
+        template += '\tuse\t\tgeneric-host\n\thostname\t{}\n'.format(
+            dev.dname)
+        if hasattr(dev, 'c_location') and dev.c_location:
+            template += '\talias\t\tDEVICE at {}\n'.format(dev.c_location)
+        template += '\taddress\t\t{}\n'.format(dev.ip)
+        if hasattr(dev, 'c_uplinks'):
+            for node in dev.c_uplinks:
+                template += '\tparents\t\t'
+                if node:
+                    template += node[0] + ','
+            template = template[:-1]
+            template += '\n'
+        template += '}\n'
+        print(template)
 
 
 def generate_dname(address, role, number):
