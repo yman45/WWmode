@@ -31,6 +31,7 @@ class Device(Persistent):
     '''Device representation class
     attrs:
         num_instances - all created instances (represent new hosts)
+        new_hosts - list of new hosts finded in last run
         founded_hosts - all hosts that found on the run
         ip - IPv4 address of device
         first_seen - datetime when instance created
@@ -44,6 +45,7 @@ class Device(Persistent):
     '''
     num_instances = 0
     founded_hosts = 0
+    new_hosts = []
 
     def __init__(self, ip):
         '''Initialize instance, add 1 to class num_instances counters
@@ -54,6 +56,7 @@ class Device(Persistent):
         self.ip = ip
         self.first_seen = datetime.datetime.now().strftime('%d-%m-%Y %H:%M')
         Device.num_instances += 1
+        Device.new_hosts.append(self.ip)
         m_logger.info('{}: New device: new device found'.format(self.ip))
 
     def __str__(self):
@@ -101,7 +104,11 @@ class Device(Persistent):
         No args & return value
         '''
         try:
-            self.dname, alias, addresslist = socket.gethostbyaddr(self.ip)
+            got_dname, alias, addresslist = socket.gethostbyaddr(self.ip)
+            if (self.dname and self.dname != got_dname) or not self.dname:
+                Device.new_hosts.append(self.ip)
+                Device.num_instances += 1
+                self.dname = got_dname
             try:
                 return_ip = socket.gethostbyname(self.dname)
                 if self.ip != return_ip:

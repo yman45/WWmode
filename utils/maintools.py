@@ -8,6 +8,7 @@ import os
 import os.path
 from queue import Queue
 from ZODB import FileStorage, DB
+import transaction
 from utils.load_settings import AppSettings, FakeSettings
 from utils.update_db import worker, Device
 from utils.dbutils import db_check, DBOpen, get_last_transaction_time
@@ -59,6 +60,12 @@ def update_db_run():
         time.time() - start_time))
     m_logger.debug('New hosts founded: {}'.format(Device.num_instances))
     m_logger.debug('Total hosts founded: {}'.format(Device.founded_hosts))
+    if Device.new_hosts:
+        generate_rancid_list(Device.new_hosts)
+        generate_plain_list(Device.new_hosts)
+        generate_dns_list(Device.new_hosts)
+        generate_trac_table(Device.new_hosts)
+        generate_nagios_list(Device.new_hosts)
 
 
 def search_db(field, value):
@@ -203,9 +210,11 @@ def show_single_device(device, quiet=False):
                 return rec
 
 
-def device_generator():
+def device_generator(hosts=None):
     '''Open ZODB, unpack device records and yields it one at a time.
-    No args
+    Args:
+        hosts - list of hosts to be yielded (default - None, so yield all
+            of them)
     Return:
         devdb[dev] - device record from DB
     '''
@@ -213,7 +222,10 @@ def device_generator():
         dbroot = connection.root()
         devdb = dbroot[run_set.db_tree]
         for dev in devdb:
-            yield devdb[dev]
+            if hosts and devdb[dev].ip in hosts:
+                yield devdb[dev]
+            elif not hosts:
+                yield devdb[dev]
 
 
 def software_search(model, version, older=True):
@@ -239,6 +251,7 @@ def software_search(model, version, older=True):
             return True
         else:
             return False
+
     for dev in device_generator():
         try:
             dev.c_model
@@ -271,22 +284,30 @@ def find_newest_firmware():
         yield model, d[model]
 
 
-def generate_plain_list():
+def generate_plain_list(hosts=None):
     '''Generate list of hosts domain names one on a line
-    No args & return values
+    Args:
+        hosts - list of hosts which values need to be generated
+    No return values
     '''
-    for dev in device_generator():
+    if hosts:
+        print('Plain list entries: ')
+    for dev in device_generator(hosts):
         if dev.dname:
             print('{}'.format(dev.dname))
 
 
-def generate_dns_list():
+def generate_dns_list(hosts=None):
     '''Generate list of DNS records based on SNMP location
     Output of that function can be very weird and most likely
     need manual intervention!
-    No args & return values
+    Args:
+        hosts - list of hosts which values need to be generated
+    No return values
     '''
-    for dev in device_generator():
+    if hosts:
+        print('DNS zone entries: ')
+    for dev in device_generator(hosts):
         if not dev.c_location:
             continue
         dev_loc = convert(dev.c_location,
@@ -303,11 +324,15 @@ def generate_dns_list():
                                             dev.ip))
 
 
-def generate_nagios_list():
+def generate_nagios_list(hosts=None):
     '''Generate Nagios host definitions
-    No args & return values
+    Args:
+        hosts - list of hosts which values need to be generated
+    No return values
     '''
-    for dev in device_generator():
+    if hosts:
+        print('Nagios configuration entries: ')
+    for dev in device_generator(hosts):
         if not dev.dname:
             continue
         template = 'define host{\n'
@@ -327,25 +352,32 @@ def generate_nagios_list():
         print(template)
 
 
-def generate_rancid_list():
+def generate_rancid_list(hosts=None):
     '''Generate Rancid router.db list
-    No args & return value
+    No return value
     '''
-    for dev in device_generator():
+    if hosts:
+        print('Rancid router.db entries: ')
+    for dev in device_generator(hosts):
         if not dev.dname:
             continue
         if hasattr(dev, 'rancid_type'):
             print('{};{};up'.format(dev.dname, dev.rancid_type))
 
 
-def generate_trac_table():
+def generate_trac_table(hosts=None):
     '''Generate markdown table for Trac knowledge base
-    No args & return value
+    Args:
+        hosts - list of hosts which values need to be generated
+    No return value
     '''
-    header = '|| Location || Device model || Domain name || IP address ||'
-    header += ' Link speed ||'
-    print(header)
-    for dev in device_generator():
+    if not hosts:
+        header = '|| Location || Device model || Domain name || IP address ||'
+        header += ' Link speed ||'
+        print(header)
+    else:
+        print('Trac table entries: ')
+    for dev in device_generator(hosts):
         template = '|| '
         t_location = getattr(dev, 'c_location', '  ')
         t_model = getattr(dev, 'c_model', '  ')
@@ -441,3 +473,17 @@ def dry_run():
         if arg.startswith('__') and arg.endswith('__'):
             continue
         print('{}:\t{}'.format(arg, getattr(run_set, arg)))
+
+
+def delete_record(ip):
+    '''Delete record frow DB
+    Args:
+        ip - IP address of device to be deleted
+    No return value
+    '''
+    with DBOpen(run_set.db_name) as connection:
+        dbroot = connection.root()
+        devdb = dbroot[run_set.db_tree]
+        del devdb[ip]
+        transaction.commit()
+    print('Deletion done!')

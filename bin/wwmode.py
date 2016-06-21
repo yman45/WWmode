@@ -35,6 +35,8 @@ group_s.add_argument('-t', '--older-than', dest='older_software',
                      software''')
 group_s.add_argument('-o', '--outdated', dest='outdated', action='store_true',
                      help='show devices with outdated software')
+group_s.add_argument('-p', '--purge', dest='purge', metavar='IP',
+                     help='delete device by IP')
 group_g = parser.add_argument_group('-G', 'generate option')
 group_g.add_argument('-P', '--plain', dest='plain', action='store_true',
                      help='generate plain list of hosts')
@@ -106,6 +108,8 @@ def show_cmd():
     elif args.outdated:
         for model, version in maintools.find_newest_firmware():
             maintools.software_search(model, version)
+    elif args.purge:
+        maintools.delete_record(args.purge)
 
 
 def generate_cmd():
