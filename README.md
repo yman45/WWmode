@@ -4,7 +4,8 @@ WWmode
 **WWmode is a tool for collecting data about devices in network, store it in
 database and search through it.**
 
-As of now it support db update and some search operations.
+It automaticly generate configuration for newly found hosts and email it.
+Hosts which domain names was change considered new.
 
 ### Update
 

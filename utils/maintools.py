@@ -6,6 +6,8 @@ import logging
 import re
 import os
 import os.path
+import smtplib
+from email.mime.text import MIMEText
 from queue import Queue
 from ZODB import FileStorage, DB
 import transaction
@@ -56,16 +58,34 @@ def update_db_run():
         for t in threads:
             t.join()
     db.close()
-    m_logger.debug('Total execution time: {:.2f} sec.'.format(
-        time.time() - start_time))
-    m_logger.debug('New hosts founded: {}'.format(Device.num_instances))
-    m_logger.debug('Total hosts founded: {}'.format(Device.founded_hosts))
-    if Device.new_hosts:
-        generate_rancid_list(Device.new_hosts)
-        generate_plain_list(Device.new_hosts)
-        generate_dns_list(Device.new_hosts)
-        generate_trac_table(Device.new_hosts)
-        generate_nagios_list(Device.new_hosts)
+    exec_time_msg = 'Total execution time: {:.2f} sec.'.format(
+        time.time() - start_time)
+    new_hosts_msg = 'New hosts founded: {}'.format(Device.num_instances)
+    total_hosts_msg = 'Total hosts founded: {}'.format(Device.founded_hosts)
+    m_logger.debug(exec_time_msg)
+    m_logger.debug(new_hosts_msg)
+    m_logger.debug(total_hosts_msg)
+    if Device.new_hosts and run_set.mail_to:
+        r_list = generate_rancid_list(Device.new_hosts)
+        p_list = generate_plain_list(Device.new_hosts)
+        d_list = generate_dns_list(Device.new_hosts)
+        t_list = generate_trac_table(Device.new_hosts)
+        n_list = generate_nagios_list(Device.new_hosts)
+        cfg_msg = 'Config for new devices:\n'
+        raw_msg = 'Run complete.\n' + exec_time_msg + '\n' + new_hosts_msg
+        raw_msg += '\n' + total_hosts_msg + '\n' + cfg_msg + '\n' + r_list
+        raw_msg += '\n' + p_list + '\n' + d_list + '\n' + t_list + '\n'
+        raw_msg += n_list + '\n'
+        msg = MIMEText(raw_msg.encode('utf-8'), _charset='utf-8')
+        msg['Subject'] = run_set.mail_subject
+        msg['From'] = run_set.mail_from
+        msg['To'] = run_set.mail_to
+        try:
+            smtp = smtplib.SMTP(host=run_set.mail_serv)
+            smtp.send_message(msg)
+            smtp.quit()
+        except smtplib.SMTPException as e:
+            m_logger.error("Email sending failed with error: {}".format(e))
 
 
 def search_db(field, value):
@@ -288,13 +308,17 @@ def generate_plain_list(hosts=None):
     '''Generate list of hosts domain names one on a line
     Args:
         hosts - list of hosts which values need to be generated
-    No return values
+    Return:
+        overall - string containing all resulting list
     '''
-    if hosts:
-        print('Plain list entries: ')
+    overall = 'Plain list entries:\n'
     for dev in device_generator(hosts):
         if dev.dname:
-            print('{}'.format(dev.dname))
+            result = '{}'.format(dev.dname)
+            if not hosts:
+                print(result)
+            overall += result + '\n'
+    return overall
 
 
 def generate_dns_list(hosts=None):
@@ -303,10 +327,10 @@ def generate_dns_list(hosts=None):
     need manual intervention!
     Args:
         hosts - list of hosts which values need to be generated
-    No return values
+    Return:
+        overall - string containing all resulting list
     '''
-    if hosts:
-        print('DNS zone entries: ')
+    overall = 'DNS list entries:\n'
     for dev in device_generator(hosts):
         if not dev.c_location:
             continue
@@ -320,18 +344,22 @@ def generate_dns_list(hosts=None):
                 print('{}\t\t\tIN A\t\t\t{}'.format(dev_loc.split(',')[0],
                                                     dev.ip))
                 continue
-        print('{}\t\t\tIN A\t\t\t{}'.format(generate_dname(dev_loc, 'p', '1'),
-                                            dev.ip))
+        result = '{}\t\t\tIN A\t\t\t{}'.format(generate_dname(dev_loc, 'p',
+                                                              '1'), dev.ip)
+        if not hosts:
+            print(result)
+        overall += result + '\n'
+    return overall
 
 
 def generate_nagios_list(hosts=None):
     '''Generate Nagios host definitions
     Args:
         hosts - list of hosts which values need to be generated
-    No return values
+    Return:
+        overall - string containing all resulting list
     '''
-    if hosts:
-        print('Nagios configuration entries: ')
+    overall = 'Nagios list entries:\n'
     for dev in device_generator(hosts):
         if not dev.dname:
             continue
@@ -349,34 +377,44 @@ def generate_nagios_list(hosts=None):
             template = template[:-1]
             template += '\n'
         template += '}\n'
-        print(template)
+        if not hosts:
+            print(template)
+        overall += template + '\n'
+    return overall
 
 
 def generate_rancid_list(hosts=None):
     '''Generate Rancid router.db list
-    No return value
+    Args:
+        hosts - list of hosts which values need to be generated
+    Return:
+        overall - string containing all resulting list
     '''
-    if hosts:
-        print('Rancid router.db entries: ')
+    overall = 'Rancid router.db entries:\n'
     for dev in device_generator(hosts):
         if not dev.dname:
             continue
         if hasattr(dev, 'rancid_type'):
-            print('{};{};up'.format(dev.dname, dev.rancid_type))
+            result = '{};{};up'.format(dev.dname, dev.rancid_type)
+            if not hosts:
+                print(result)
+            overall += result + '\n'
+    return overall
 
 
 def generate_trac_table(hosts=None):
     '''Generate markdown table for Trac knowledge base
     Args:
         hosts - list of hosts which values need to be generated
-    No return value
+    Return:
+        overall - string containing all resulting list
     '''
     if not hosts:
         header = '|| Location || Device model || Domain name || IP address ||'
         header += ' Link speed ||'
         print(header)
     else:
-        print('Trac table entries: ')
+        overall = 'Trac table entries:\n'
     for dev in device_generator(hosts):
         template = '|| '
         t_location = getattr(dev, 'c_location', '  ')
@@ -388,7 +426,10 @@ def generate_trac_table(hosts=None):
             template += dev.c_uplinks[0][1] + ' ||'
         else:
             template += '  ||'
-        print(template)
+        if not hosts:
+            print(template)
+        overall += template + '\n'
+    return overall
 
 
 def generate_dname(address, role, number):

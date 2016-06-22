@@ -100,6 +100,10 @@ class AppSettings:
         self.supply_zone = None
         self.default_zone = 'local'
         self.domain_prefix = ''
+        self.mail_serv = ''
+        self.mail_to = ''
+        self.mail_from = 'wwmode@localhost'
+        self.mail_subject = '[wwmode] run report'
         self.bind_dict = {}
         self.tacacs_pairs = {}
         self.special_settings_list = ['Wanted:', 'Bindings:', 'Tacacs pairs:']
