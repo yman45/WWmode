@@ -63,7 +63,9 @@ else:
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 if args.verbose:
-    if args.verbose > 1:
+    if args.verbose == 1:
+        ch.setLevel(logging.WARNING)
+    elif args.verbose == 2:
         ch.setLevel(logging.DEBUG)
     else:
         ch.setLevel(logging.INFO)

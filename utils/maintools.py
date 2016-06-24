@@ -66,6 +66,7 @@ def update_db_run():
     m_logger.debug(new_hosts_msg)
     m_logger.debug(total_hosts_msg)
     if Device.new_hosts and run_set.mail_to:
+        print(Device.new_hosts)
         r_list = generate_rancid_list(Device.new_hosts)
         p_list = generate_plain_list(Device.new_hosts)
         d_list = generate_dns_list(Device.new_hosts)
@@ -197,7 +198,7 @@ def show_single_device(device, quiet=False):
         if device:
             try:
                 ipaddress.ip_address(device)
-                if device in devdb.keys():
+                if device in devdb:
                     print(devdb[device])
                 else:
                     print("No device with that IP in DB")
@@ -241,11 +242,10 @@ def device_generator(hosts=None):
     with DBOpen(run_set.db_name) as connection:
         dbroot = connection.root()
         devdb = dbroot[run_set.db_tree]
-        for dev in devdb:
-            if hosts and devdb[dev].ip in hosts:
-                yield devdb[dev]
-            elif not hosts:
-                yield devdb[dev]
+        if hosts:
+            yield from [devdb[x] for x in hosts if x in devdb]
+        else:
+            yield from [devdb[x] for x in devdb]
 
 
 def software_search(model, version, older=True):
@@ -413,8 +413,7 @@ def generate_trac_table(hosts=None):
         header = '|| Location || Device model || Domain name || IP address ||'
         header += ' Link speed ||'
         print(header)
-    else:
-        overall = 'Trac table entries:\n'
+    overall = 'Trac table entries:\n'
     for dev in device_generator(hosts):
         template = '|| '
         t_location = getattr(dev, 'c_location', '  ')

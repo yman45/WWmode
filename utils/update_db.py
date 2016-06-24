@@ -105,20 +105,21 @@ class Device(Persistent):
         '''
         try:
             got_dname, alias, addresslist = socket.gethostbyaddr(self.ip)
-            if (self.dname and self.dname != got_dname) or not self.dname:
+            has_dname = hasattr(self, 'dname')
+            if (has_dname and self.dname != got_dname) or not has_dname:
                 Device.new_hosts.append(self.ip)
                 Device.num_instances += 1
                 self.dname = got_dname
             try:
                 return_ip = socket.gethostbyname(self.dname)
                 if self.ip != return_ip:
-                    m_logger.error('{}: DNS: A record not same as PTR'.format(
-                        self.ip))
+                    m_logger.warning(
+                        '{}: DNS: A record not same as PTR'.format(self.ip))
             except socket.gaierror:
-                m_logger.error('{}: DNS: No A record on received PTR'.format(
+                m_logger.warning('{}: DNS: No A record on received PTR'.format(
                     self.ip))
         except socket.herror:
-            m_logger.error('{}: DNS: No PTR record for that host'.format(
+            m_logger.warning('{}: DNS: No PTR record for that host'.format(
                 self.ip))
             self.dname = ''
 
@@ -211,7 +212,7 @@ def worker(queue, settings, db):
                 m_logger.error(
                     'DNS: Incorrect parameters for supply zone check')
             except NoNameInSupplyZone:
-                m_logger.error('{}: DNS: no domain name in {} zone'.format(
+                m_logger.warning('{}: DNS: no domain name in {} zone'.format(
                     device.ip, settings.supply_zone))
         for card in device_cards:
             if device.ip in settings.bind_dict.keys():
