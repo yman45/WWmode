@@ -231,7 +231,7 @@ def worker(queue, settings, db):
             wanted_params.update(settings.wanted_params)
             for param in wanted_params.keys():
                 if param == 'uplinks':
-                    oid = 'well-known'
+                    oid = 'well-known'  # IF-MIB:ifAlias is well-known :)
                 elif param + '_oid' not in dev_card.keys():
                     m_logger.warning('No OID for {}'.format(param))
                     continue

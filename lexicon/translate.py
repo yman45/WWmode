@@ -124,7 +124,8 @@ def translit(text, start, end, dictionary):
     first_part = text[:start]
     last_part = text[end:]
     text = text[start:end]
-    case_map = [0 if ch in dictionary.keys() else 1 for ch in text]
+    case_map = [0 if ch.islower() else 1 for ch in text]
+    print(case_map)
     text = text.lower()
     for letters in dictionary.keys():
         if letters in text:
