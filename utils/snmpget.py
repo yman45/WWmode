@@ -91,6 +91,11 @@ class SnmpGetter:
         all_vlans = []
         for oid, vlan in tree_walk(self.engine, self.settings.ro_community,
                                    device.ip, oid):
+            if not oid:
+                m_logger.warning(
+                    'No OID when running tree walk at {} on {}'.format(
+                        oid, device.ip))
+                continue
             if device.vtree:
                 vlan = oid.split('.')[-1]
             if vlan not in self.settings.unneded_vlans:
